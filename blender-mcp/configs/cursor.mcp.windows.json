@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "plygon-blender": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "uvx",
+        "--from",
+        "git+https://github.com/EmilvanDam/Plygon.git#subdirectory=blender-mcp",
+        "plygon-blender-mcp"
+      ],
+      "env": {
+        "BLENDER_HOST": "localhost",
+        "BLENDER_PORT": "9876",
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}
