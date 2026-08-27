@@ -1,0 +1,42 @@
+[project]
+name = "plygon-houdini-mcp"
+version = "1.0.0"
+description = "Talk to Houdini from Cursor. Local MCP, no telemetry, fork-friendly."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Plygon" }]
+keywords = ["houdini", "sidefx", "mcp", "cursor", "hou", "3d", "vfx", "tech-art", "agent"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Topic :: Multimedia :: Graphics :: 3D Modeling",
+]
+dependencies = [
+  "mcp>=1.9.0,<2",
+]
+
+[project.scripts]
+plygon-houdini-mcp = "plygon_houdini_mcp.server:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.urls]
+Homepage = "https://github.com/EmilvanDam/Plygon"
+Repository = "https://github.com/EmilvanDam/Plygon"
+Issues = "https://github.com/EmilvanDam/Plygon/issues"
+Documentation = "https://github.com/EmilvanDam/Plygon/tree/main/houdini-mcp"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+plygon_houdini_mcp = ["py.typed"]
