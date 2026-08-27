@@ -1,6 +1,6 @@
 # Steal this
 
-Plygon is a public MIT workshop. Forks are expected.
+`plygon-mcp` is a public MIT workshop. Forks are expected.
 
 - Blender MCP lives in `blender-mcp/`
 - Keep the TCP protocol small; add tools when a real shot needs them

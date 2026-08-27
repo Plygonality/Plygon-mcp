@@ -23,10 +23,10 @@ plygon-blender-mcp = "plygon_blender_mcp.server:main"
 dev = ["pytest>=8.0"]
 
 [project.urls]
-Homepage = "https://github.com/EmilvanDam/Plygon"
-Repository = "https://github.com/EmilvanDam/Plygon"
-Issues = "https://github.com/EmilvanDam/Plygon/issues"
-Documentation = "https://github.com/EmilvanDam/Plygon/tree/main/blender-mcp"
+Homepage = "https://github.com/EmilvanDam/plygon-mcp"
+Repository = "https://github.com/EmilvanDam/plygon-mcp"
+Issues = "https://github.com/EmilvanDam/plygon-mcp/issues"
+Documentation = "https://github.com/EmilvanDam/plygon-mcp/tree/main/blender-mcp"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

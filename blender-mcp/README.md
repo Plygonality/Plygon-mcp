@@ -5,7 +5,7 @@
 <p align="center"><strong>Cursor talks. Blender builds. Your files never leave the machine.</strong></p>
 
 <p align="center">
-  <a href="https://github.com/EmilvanDam/Plygon"><img src="https://img.shields.io/github/stars/EmilvanDam/Plygon?style=flat-square&color=ff6a1a" alt="GitHub stars"></a>
+  <a href="https://github.com/EmilvanDam/plygon-mcp"><img src="https://img.shields.io/github/stars/EmilvanDam/plygon-mcp?style=flat-square&color=ff6a1a" alt="GitHub stars"></a>
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-ff6a1a?style=flat-square" alt="MIT"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-3776ab?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/Blender-3.0%2B-orange?style=flat-square&logo=blender&logoColor=white" alt="Blender 3.0+">
@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL0VtaWx2YW5EYW0vUGx5Z29uLmdpdCNzdWJkaXJlY3Rvcnk9YmxlbmRlci1tY3AiLCJwbHlnb24tYmxlbmRlci1tY3AiXSwiZW52Ijp7IkJMRU5ERVJfSE9TVCI6ImxvY2FsaG9zdCIsIkJMRU5ERVJfUE9SVCI6Ijk4NzYifX0%3D"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add Plygon Blender MCP to Cursor"></a>
+  <a href="https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL0VtaWx2YW5EYW0vcGx5Z29uLW1jcC5naXQjc3ViZGlyZWN0b3J5PWJsZW5kZXItbWNwIiwicGx5Z29uLWJsZW5kZXItbWNwIl0sImVudiI6eyJCTEVOREVSX0hPU1QiOiJsb2NhbGhvc3QiLCJCTEVOREVSX1BPUlQiOiI5ODc2In19"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add Plygon Blender MCP to Cursor"></a>
 </p>
 
 # Plygon Blender MCP
@@ -46,8 +46,8 @@ Plygon is the opposite:
 ## Get it from GitHub
 
 ```bash
-git clone https://github.com/EmilvanDam/Plygon.git
-cd Plygon
+git clone https://github.com/EmilvanDam/plygon-mcp.git
+cd plygon-mcp
 ```
 
 Or hit **Fork** — this repo is MIT on purpose.
@@ -67,7 +67,7 @@ Blender needs a GUI. `blender -b` will not run commands.
 
 ### 2. Connect Cursor
 
-**Fastest:** [Add to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL0VtaWx2YW5EYW0vUGx5Z29uLmdpdCNzdWJkaXJlY3Rvcnk9YmxlbmRlci1tY3AiLCJwbHlnb24tYmxlbmRlci1tY3AiXSwiZW52Ijp7IkJMRU5ERVJfSE9TVCI6ImxvY2FsaG9zdCIsIkJMRU5ERVJfUE9SVCI6Ijk4NzYifX0%3D) (runs the server straight from this GitHub repo via `uvx`).
+**Fastest:** [Add to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL0VtaWx2YW5EYW0vcGx5Z29uLW1jcC5naXQjc3ViZGlyZWN0b3J5PWJsZW5kZXItbWNwIiwicGx5Z29uLWJsZW5kZXItbWNwIl0sImVudiI6eyJCTEVOREVSX0hPU1QiOiJsb2NhbGhvc3QiLCJCTEVOREVSX1BPUlQiOiI5ODc2In19) (runs the server straight from this GitHub repo via `uvx`).
 
 **Or paste this** into Cursor → **Settings → MCP**, or as project `.cursor/mcp.json`:
 
@@ -78,7 +78,7 @@ Blender needs a GUI. `blender -b` will not run commands.
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/EmilvanDam/Plygon.git#subdirectory=blender-mcp",
+        "git+https://github.com/EmilvanDam/plygon-mcp.git#subdirectory=blender-mcp",
         "plygon-blender-mcp"
       ],
       "env": {
@@ -188,4 +188,4 @@ uv run python scripts/smoke_test.py --live   # Blender must be listening
 
 MIT. Fork it, ship it in a studio pipeline, put your name on the fork.
 
-**If Plygon MCP saves you a night of clicking, star [EmilvanDam/Plygon](https://github.com/EmilvanDam/Plygon).**
+**If Plygon MCP saves you a night of clicking, star [EmilvanDam/plygon-mcp](https://github.com/EmilvanDam/plygon-mcp).**
