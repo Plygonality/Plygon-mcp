@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "plygon-houdini": {
+      "command": "plygon-houdini-mcp",
+      "env": {
+        "HOUDINI_HOST": "localhost",
+        "HOUDINI_PORT": "9877"
+      }
+    }
+  }
+}

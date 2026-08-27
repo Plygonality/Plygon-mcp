@@ -19,9 +19,9 @@
 
 # Plygon
 
-A tech-art studio repo. First drop: a **local Blender MCP** you can fork, run, and actually own.
+A tech-art studio repo. First drops: **local Blender MCP** and **local Houdini MCP** you can fork, run, and actually own.
 
-Cursor’s agents already write code. **Plygon lets them model.** Describe a shot, a prop, a material — the agent inspects your scene, moves objects, assigns shaders, frames the camera, and sends you a viewport screenshot to check its work.
+Cursor’s agents already write code. **Plygon lets them model and build FX setups.** Describe a shot, a prop, a material, a SOP network — the agent inspects your scene, moves nodes, assigns parms, frames the camera, and sends you a viewport screenshot to check its work.
 
 Nothing leaves localhost. No telemetry. No “free” cloud that trains on your `.blend`.
 
@@ -40,7 +40,7 @@ This is not a 300-tool kitchen sink. It’s the layer tech artists actually keep
 
 ---
 
-## 60-second setup
+## 60-second setup (Blender)
 
 **1. Clone**
 
@@ -71,13 +71,38 @@ Steal-these prompts: **[`blender-mcp/examples/prompts.md`](blender-mcp/examples/
 
 ---
 
+## 60-second setup (Houdini)
+
+**1. Clone** (same repo as above)
+
+**2. Install the Houdini package**
+
+```bash
+python houdini-mcp/scripts/install_package.py
+```
+
+Restart Houdini → import shelf from `packages/plygon_houdini_mcp/toolbar/plygon_houdini_mcp.shelf` → **Start MCP Server**.
+
+**3. Connect Cursor**
+
+Paste [`houdini-mcp/configs/cursor.mcp.git.json`](houdini-mcp/configs/cursor.mcp.git.json) into **Settings → MCP**, or use the project [`.cursor/mcp.json`](.cursor/mcp.json) if you cloned the repo.
+
+**4. Say this**
+
+> Create a geo with a grid and mountain SOP. Layout, cook, screenshot when it reads as terrain.
+
+Full docs: **[`houdini-mcp/README.md`](houdini-mcp/README.md)**  
+Prompts: **[`houdini-mcp/examples/prompts.md`](houdini-mcp/examples/prompts.md)**
+
+---
+
 ## How it works
 
 ```
-You  →  Cursor agent  →  Plygon MCP  →  localhost:9876  →  Blender  →  your scene
+You  →  Cursor agent  →  Plygon MCP  →  localhost  →  Blender / Houdini  →  your scene
 ```
 
-The agent never needs your Blender Python muscle memory. You keep the taste. It keeps the clicks.
+The agent never needs your DCC Python muscle memory. You keep the taste. It keeps the clicks.
 
 ---
 
@@ -85,6 +110,6 @@ The agent never needs your Blender Python muscle memory. You keep the taste. It 
 
 If this saves you a night of clicking, **star the repo** so other tech artists find it.
 
-Forks are the point. Plygon is a public MIT workshop for bpy tools, add-ons, and MCPs — this Blender bridge is the first thing worth stealing.
+Forks are the point. Plygon is a public MIT workshop for DCC tools, add-ons, and MCPs — Blender and Houdini bridges are the first things worth stealing.
 
 [github.com/EmilvanDam/Plygon](https://github.com/EmilvanDam/Plygon)

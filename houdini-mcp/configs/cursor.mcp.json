@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "plygon-houdini": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "REPLACE_WITH_ABSOLUTE_PATH_TO/houdini-mcp",
+        "plygon-houdini-mcp"
+      ],
+      "env": {
+        "HOUDINI_HOST": "localhost",
+        "HOUDINI_PORT": "9877"
+      }
+    }
+  }
+}

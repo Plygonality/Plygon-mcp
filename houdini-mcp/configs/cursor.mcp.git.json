@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "plygon-houdini": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/EmilvanDam/Plygon.git#subdirectory=houdini-mcp",
+        "plygon-houdini-mcp"
+      ],
+      "env": {
+        "HOUDINI_HOST": "localhost",
+        "HOUDINI_PORT": "9877"
+      }
+    }
+  }
+}

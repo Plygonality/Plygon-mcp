@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <tool name="plygonmcp_start" label="Start MCP Server" icon="MISC_python">
+    <script><![CDATA[
+import os
+from plygon_houdini_mcp import listener
+
+port = int(os.environ.get("HOUDINI_PORT", "9877"))
+listener.start_server(port=port)
+]]></script>
+  </tool>
+
+  <tool name="plygonmcp_stop" label="Stop MCP Server" icon="MISC_python">
+    <script><![CDATA[
+from plygon_houdini_mcp import listener
+listener.stop_server()
+]]></script>
+  </tooltool>
+
+  <tool name="plygonmcp_status" label="MCP Status" icon="MISC_python">
+    <script><![CDATA[
+from plygon_houdini_mcp import listener
+import json
+print(json.dumps(listener.server_status(), indent=2))
+]]></script>
+  </tool>
+</shelfDocument>
