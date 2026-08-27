@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "plygon-blender": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "REPLACE_WITH_ABSOLUTE_PATH_TO/blender-mcp",
+        "plygon-blender-mcp"
+      ],
+      "env": {
+        "BLENDER_HOST": "localhost",
+        "BLENDER_PORT": "9876"
+      }
+    }
+  }
+}

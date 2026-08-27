@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "plygon-blender": {
+      "command": "python",
+      "args": [
+        "-m",
+        "plygon_blender_mcp.server"
+      ],
+      "cwd": "REPLACE_WITH_ABSOLUTE_PATH_TO/blender-mcp",
+      "env": {
+        "BLENDER_HOST": "localhost",
+        "BLENDER_PORT": "9876",
+        "PYTHONPATH": "REPLACE_WITH_ABSOLUTE_PATH_TO/blender-mcp/src"
+      }
+    }
+  }
+}
