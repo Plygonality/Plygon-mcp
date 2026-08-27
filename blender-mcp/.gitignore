@@ -8,6 +8,5 @@ build/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-uv.lock
 *.blend1
 .DS_Store
