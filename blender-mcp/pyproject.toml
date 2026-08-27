@@ -1,12 +1,12 @@
 [project]
 name = "plygon-blender-mcp"
 version = "1.0.0"
-description = "Local Blender MCP server for Cursor — drive Blender from agent models"
+description = "Talk to Blender from Cursor. Local MCP, no telemetry, fork-friendly."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [{ name = "Plygon" }]
-keywords = ["blender", "mcp", "cursor", "bpy", "3d"]
+keywords = ["blender", "mcp", "cursor", "bpy", "3d", "tech-art", "agent"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Operating System :: OS Independent",
@@ -23,7 +23,10 @@ plygon-blender-mcp = "plygon_blender_mcp.server:main"
 dev = ["pytest>=8.0"]
 
 [project.urls]
-Homepage = "https://github.com/"
+Homepage = "https://github.com/EmilvanDam/Plygon"
+Repository = "https://github.com/EmilvanDam/Plygon"
+Issues = "https://github.com/EmilvanDam/Plygon/issues"
+Documentation = "https://github.com/EmilvanDam/Plygon/tree/main/blender-mcp"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

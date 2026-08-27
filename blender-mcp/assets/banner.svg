@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420" role="img" aria-label="Plygon Blender MCP">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b0b0c"/>
+      <stop offset="100%" stop-color="#161412"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff6a1a"/>
+      <stop offset="100%" stop-color="#ffb347"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1400" height="420" fill="url(#bg)"/>
+  <rect width="1400" height="420" fill="url(#grid)"/>
+  <rect x="0" y="0" width="8" height="420" fill="url(#accent)"/>
+
+  <!-- Faceted mark -->
+  <g transform="translate(72,78)">
+    <polygon points="110,10 210,70 210,190 110,250 10,190 10,70" fill="none" stroke="#fff" stroke-width="3"/>
+    <polygon points="110,10 210,70 110,130 10,70" fill="#ff6a1a" fill-opacity="0.92"/>
+    <polygon points="110,130 210,70 210,190" fill="#ffb347" fill-opacity="0.55"/>
+    <polygon points="110,130 210,190 110,250 10,190" fill="#ffffff" fill-opacity="0.08"/>
+    <polygon points="10,70 110,130 10,190" fill="#ffffff" fill-opacity="0.16"/>
+    <line x1="110" y1="10" x2="110" y2="250" stroke="#fff" stroke-width="2" stroke-opacity="0.85"/>
+  </g>
+
+  <text x="340" y="168" fill="#ffffff" font-family="ui-sans-serif, system-ui, Inter, Helvetica, Arial" font-size="72" font-weight="750" letter-spacing="4">PLYGON</text>
+  <text x="340" y="228" fill="#ff8a3d" font-family="ui-sans-serif, system-ui, Inter, Helvetica, Arial" font-size="28" font-weight="650" letter-spacing="8">BLENDER MCP</text>
+  <text x="340" y="292" fill="#d7d2cc" font-family="ui-sans-serif, system-ui, Inter, Helvetica, Arial" font-size="22">Talk to Blender from Cursor. Your scene stays on your machine.</text>
+
+  <g transform="translate(1080,86)">
+    <rect x="0" y="0" width="236" height="248" rx="18" fill="#1c1916" stroke="#3a342e"/>
+    <text x="22" y="42" fill="#8a837b" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">agent ’ blender</text>
+    <text x="22" y="84" fill="#ffffff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">create Suzanne</text>
+    <text x="22" y="114" fill="#ff8a3d" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">metal 0.85</text>
+    <text x="22" y="144" fill="#ffffff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">key + rim light</text>
+    <text x="22" y="174" fill="#ffffff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">frame camera</text>
+    <text x="22" y="220" fill="#7dffa3" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14">Ï localhost:9876</text>
+  </g>
+</svg>

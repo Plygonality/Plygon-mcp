@@ -4,10 +4,9 @@
       "command": "cmd",
       "args": [
         "/c",
-        "uv",
-        "run",
-        "--directory",
-        "REPLACE_WITH_ABSOLUTE_PATH_TO\\blender-mcp",
+        "uvx",
+        "--from",
+        "git+https://github.com/EmilvanDam/Plygon.git#subdirectory=blender-mcp",
         "plygon-blender-mcp"
       ],
       "env": {
