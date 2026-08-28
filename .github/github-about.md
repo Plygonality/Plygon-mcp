@@ -18,6 +18,26 @@ YouTube (`https://www.youtube.com/@Plygonality`) and LinkedIn are already set.
 
 ---
 
+## Profile bio (About)
+
+GitHub profile → [Settings → Public profile → Bio](https://github.com/settings/profile). Max 160 characters.
+
+Current (old): `22 // Technical 3D Environment Artist, Procedural Systems Engineer, building Blender add-ons with Bpy tooling // 1st year GGP major at Howest DAE`
+
+**Use this:**
+
+```
+22 // Technical 3D Environment Artist. Local MCP for Blender & Houdini, no telemetry // GGP, Howest DAE
+```
+
+Shorter, if you want it tighter:
+
+```
+Technical 3D environment artist. Local MCP for Blender and Houdini — no telemetry. GGP at Howest DAE.
+```
+
+---
+
 ## Still to do in GitHub UI
 
 ### 1. Topics

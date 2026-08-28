@@ -2,7 +2,7 @@
 
 ## About
 
-22 // Technical 3D Environment Artist, Procedural Systems Engineer, building Blender add-ons with Bpy tooling // 1st year GGP major at Howest DAE
+22 // Technical 3D Environment Artist. Local MCP for Blender & Houdini, no telemetry // GGP, Howest DAE
 
 I build Blender add-ons, Houdini packages, and **MCP bridges that stay on your machine**. No telemetry. No cloud that trains on your `.blend` or `.hip`.
 
