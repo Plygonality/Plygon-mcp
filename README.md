@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/EmilvanDam/Plygon/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-ff6a1a?style=flat-square" alt="MIT"></a>
+  <a href="https://github.com/Plygonality/Plygon-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-ff6a1a?style=flat-square" alt="MIT"></a>
   <a href="blender-mcp/"><img src="https://img.shields.io/badge/Blender-3.0%2B-orange?style=flat-square&logo=blender&logoColor=white" alt="Blender 3.0+"></a>
   <a href="houdini-mcp/"><img src="https://img.shields.io/badge/Houdini-19.5%2B-orange?style=flat-square" alt="Houdini 19.5+"></a>
   <a href="blender-mcp/"><img src="https://img.shields.io/badge/Cursor-MCP-111111?style=flat-square" alt="Cursor MCP"></a>
@@ -19,6 +19,8 @@
 A tech-art studio repo of **local MCP bridges** you can fork, run, and actually own.
 
 Cursor's agents already write code. **Plygon gives them hands inside your DCC** — inspect the scene, make edits, and screenshot the viewport so they can check their own work. Nothing leaves localhost. No telemetry. No cloud that trains on your `.blend` or `.hip`.
+
+Local, no-telemetry fork of the [ahujasid/blender-mcp](https://github.com/ahujasid/blender-mcp) localhost-TCP + FastMCP pattern, shaped for Cursor and studio pipelines. See [`THIRD_PARTY.md`](THIRD_PARTY.md).
 
 | Bridge | Port | Docs |
 |--------|------|------|
@@ -43,8 +45,8 @@ This is not a 300-tool kitchen sink. It's the layer tech artists actually keep: 
 ## Clone once
 
 ```bash
-git clone https://github.com/EmilvanDam/Plygon.git
-cd Plygon
+git clone https://github.com/Plygonality/Plygon-mcp.git
+cd Plygon-mcp
 ```
 
 Pick one DCC below — or set up both. The project [`.cursor/mcp.json`](.cursor/mcp.json) registers Blender and Houdini when you clone the repo.
@@ -70,7 +72,7 @@ Blender → Preferences → Add-ons → enable **Plygon Blender MCP**.
 
 **2. Connect Cursor**
 
-[Add Blender to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL0VtaWx2YW5EYW0vUGx5Z29uLmdpdCNzdWJkaXJlY3Rvcnk9YmxlbmRlci1tY3AiLCJwbHlnb24tYmxlbmRlci1tY3AiXSwiZW52Ijp7IkJMRU5ERVJfSE9TVCI6ImxvY2FsaG9zdCIsIkJMRU5ERVJfUE9SVCI6Ijk4NzYifX0%3D) · or paste [`blender-mcp/configs/cursor.mcp.git.json`](blender-mcp/configs/cursor.mcp.git.json) into **Settings → MCP**.
+[Add Blender to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D) · or paste [`blender-mcp/configs/cursor.mcp.git.json`](blender-mcp/configs/cursor.mcp.git.json) into **Settings → MCP**.
 
 **3. Try it**
 
@@ -125,7 +127,7 @@ Paste [`houdini-mcp/configs/cursor.mcp.git.json`](houdini-mcp/configs/cursor.mcp
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/EmilvanDam/Plygon.git#subdirectory=houdini-mcp",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=houdini-mcp",
         "plygon-houdini-mcp"
       ],
       "env": {
@@ -179,6 +181,7 @@ You keep the taste. The agent keeps the clicks.
 | [`blender-mcp/`](blender-mcp/) | Blender add-on + MCP server |
 | [`houdini-mcp/`](houdini-mcp/) | Houdini package + MCP server |
 | [`.cursor/mcp.json`](.cursor/mcp.json) | Project-level Cursor config (both DCCs) |
+| [`THIRD_PARTY.md`](THIRD_PARTY.md) | Provenance (blender-mcp pattern) |
 
 ---
 
@@ -188,4 +191,4 @@ If this saves you a night of clicking, **star the repo** so other tech artists f
 
 Forks are the point. Plygon is a public MIT workshop for DCC tools, add-ons, and MCPs.
 
-[github.com/EmilvanDam/Plygon](https://github.com/EmilvanDam/Plygon)
+[github.com/Plygonality/Plygon-mcp](https://github.com/Plygonality/Plygon-mcp)
