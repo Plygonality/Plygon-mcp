@@ -1,6 +1,8 @@
 # Emil van Dam
 
-Technical 3D environment artist. Procedural systems. Howest DAE — Game Graphics Production.
+## About
+
+22 // Technical 3D Environment Artist, Procedural Systems Engineer, building Blender add-ons with Bpy tooling // 1st year GGP major at Howest DAE
 
 I build Blender add-ons, Houdini packages, and **MCP bridges that stay on your machine**. No telemetry. No cloud that trains on your `.blend` or `.hip`.
 
