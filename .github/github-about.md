@@ -1,35 +1,28 @@
-# GitHub About copy (edit, then paste)
+# GitHub About copy
 
-This token cannot write GitHub Settings. Edit the lines you want, then paste them in the GitHub UI.
+Paste list for remaining GitHub UI steps. This token cannot write Settings.
 
-Current About (wrong): `Repository for Bpy tooling, self-built Blender add-ons, tech art, MCPs, VEX/Python coding projects`
+## Live now (do not re-paste)
 
----
-
-## 1. Description
-
-Paste into **[Plygon-mcp → Settings → General → Description](https://github.com/Plygonality/Plygon-mcp/settings)**  
-(or the pencil next to About on the repo page). Max 350 characters.
-
-**Use this:**
+**Description** — already on [Plygon-mcp](https://github.com/Plygonality/Plygon-mcp):
 
 ```
 Local MCP bridges for Blender and Houdini. Cursor inspects, edits, and screenshots your scene on localhost. No telemetry.
 ```
 
-Shorter, if you want it tighter:
+**Pin** — `Plygon-mcp` is already pinned on [github.com/Plygonality](https://github.com/Plygonality).
 
-```
-Local, no-telemetry MCP for Blender and Houdini. Cursor on your machine, not in the cloud.
-```
+**Website** — leave blank unless you want ArtStation there.
 
-Leave **Website** blank unless you want ArtStation there.
+YouTube (`https://www.youtube.com/@Plygonality`) and LinkedIn are already set.
 
 ---
 
-## 2. Topics
+## Still to do in GitHub UI
 
-Same About panel → **Topics**. Add:
+### 1. Topics
+
+About panel on [Plygon-mcp](https://github.com/Plygonality/Plygon-mcp) → **Topics**. Add:
 
 ```
 blender
@@ -44,18 +37,14 @@ tech-art
 sidefx
 ```
 
----
-
-## 3. Pin
-
-On [github.com/Plygonality](https://github.com/Plygonality) → **Customize your pins** → pin **Plygon-mcp**. Unpin anything leftover from the old username if it shows up.
-
----
-
-## 4. Profile README
+### 2. Profile README
 
 GitHub only renders a profile README from a **public** repo named exactly `Plygonality` under user `Plygonality`. That repo does not exist yet.
 
 1. Open [github.com/new?name=Plygonality](https://github.com/new?name=Plygonality)
 2. Owner: **Plygonality**. Repo name: **Plygonality**. Public. Add a README.
 3. Replace the README with [profile-readme.md](profile-readme.md) (edit it first if you want).
+
+### 3. Optional leftover
+
+[`Plygonality/CatDemon14`](https://github.com/Plygonality/CatDemon14) is a public leftover from the old username. Description still says "Config files for my GitHub profile." The tree is an old blender-mcp checkout. Make it **private** or delete it — it is not the profile README.
