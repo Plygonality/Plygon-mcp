@@ -1,7 +1,7 @@
 <p align="center"><strong>Cursor talks. Houdini builds. Your files never leave the machine.</strong></p>
 
 <p align="center">
-  <a href="https://github.com/EmilvanDam/Plygon"><img src="https://img.shields.io/github/stars/EmilvanDam/Plygon?style=flat-square&color=ff6a1a" alt="GitHub stars"></a>
+  <a href="https://github.com/Plygonality/Plygon-mcp"><img src="https://img.shields.io/github/stars/Plygonality/Plygon-mcp?style=flat-square&color=ff6a1a" alt="GitHub stars"></a>
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-ff6a1a?style=flat-square" alt="MIT"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-3776ab?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/Houdini-19.5%2B-orange?style=flat-square" alt="Houdini 19.5+">
@@ -13,6 +13,8 @@
 Give Cursor (and its agent models) hands inside SideFX Houdini.
 
 Describe a setup. The agent inspects the hip, creates nodes, wires SOPs, sets parms, and **screenshots the Scene Viewer** so it can judge its own work — the same loop you'd run as a TD, minus the clicking.
+
+Same localhost-TCP + FastMCP shape as the Blender bridge. See [`THIRD_PARTY.md`](../THIRD_PARTY.md).
 
 Fork it from GitHub. Run it on localhost. Own the code.
 
@@ -38,8 +40,8 @@ Plygon is the opposite:
 ## Get it from GitHub
 
 ```bash
-git clone https://github.com/EmilvanDam/Plygon.git
-cd Plygon
+git clone https://github.com/Plygonality/Plygon-mcp.git
+cd Plygon-mcp
 ```
 
 Or hit **Fork** — this repo is MIT on purpose.
@@ -72,7 +74,7 @@ Paste this into Cursor → **Settings → MCP**, or as project `.cursor/mcp.json
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/EmilvanDam/Plygon.git#subdirectory=houdini-mcp",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=houdini-mcp",
         "plygon-houdini-mcp"
       ],
       "env": {
@@ -187,4 +189,4 @@ uv run python scripts/smoke_test.py --live   # Houdini listener must be running
 
 MIT. Fork it, ship it in a studio pipeline, put your name on the fork.
 
-**If Plygon Houdini MCP saves you a night of clicking, star [EmilvanDam/Plygon](https://github.com/EmilvanDam/Plygon).**
+**If Plygon Houdini MCP saves you a night of clicking, star [Plygonality/Plygon-mcp](https://github.com/Plygonality/Plygon-mcp).**

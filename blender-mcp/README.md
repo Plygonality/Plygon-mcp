@@ -5,7 +5,7 @@
 <p align="center"><strong>Cursor talks. Blender builds. Your files never leave the machine.</strong></p>
 
 <p align="center">
-  <a href="https://github.com/EmilvanDam/Plygon"><img src="https://img.shields.io/github/stars/EmilvanDam/Plygon?style=flat-square&color=ff6a1a" alt="GitHub stars"></a>
+  <a href="https://github.com/Plygonality/Plygon-mcp"><img src="https://img.shields.io/github/stars/Plygonality/Plygon-mcp?style=flat-square&color=ff6a1a" alt="GitHub stars"></a>
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-ff6a1a?style=flat-square" alt="MIT"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-3776ab?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/Blender-3.0%2B-orange?style=flat-square&logo=blender&logoColor=white" alt="Blender 3.0+">
@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL0VtaWx2YW5EYW0vUGx5Z29uLmdpdCNzdWJkaXJlY3Rvcnk9YmxlbmRlci1tY3AiLCJwbHlnb24tYmxlbmRlci1tY3AiXSwiZW52Ijp7IkJMRU5ERVJfSE9TVCI6ImxvY2FsaG9zdCIsIkJMRU5ERVJfUE9SVCI6Ijk4NzYifX0%3D"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add Plygon Blender MCP to Cursor"></a>
+  <a href="https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D"><img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Add Plygon Blender MCP to Cursor"></a>
 </p>
 
 # Plygon Blender MCP
@@ -21,6 +21,8 @@
 Give Cursor (and its agent models) hands inside Blender.
 
 Describe a set. The agent inspects the scene, creates meshes, assigns materials, frames a camera, and **screenshots the viewport** so it can judge its own work — the same loop you’d run as a TD, minus the clicking.
+
+Local, no-telemetry fork of [ahujasid/blender-mcp](https://github.com/ahujasid/blender-mcp) (MIT) for Cursor and studio pipelines. See [`THIRD_PARTY.md`](../THIRD_PARTY.md).
 
 Fork it from GitHub. Run it on localhost. Own the code.
 
@@ -46,8 +48,8 @@ Plygon is the opposite:
 ## Get it from GitHub
 
 ```bash
-git clone https://github.com/EmilvanDam/Plygon.git
-cd Plygon
+git clone https://github.com/Plygonality/Plygon-mcp.git
+cd Plygon-mcp
 ```
 
 Or hit **Fork** — this repo is MIT on purpose.
@@ -67,7 +69,7 @@ Blender needs a GUI. `blender -b` will not run commands.
 
 ### 2. Connect Cursor
 
-**Fastest:** [Add to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL0VtaWx2YW5EYW0vUGx5Z29uLmdpdCNzdWJkaXJlY3Rvcnk9YmxlbmRlci1tY3AiLCJwbHlnb24tYmxlbmRlci1tY3AiXSwiZW52Ijp7IkJMRU5ERVJfSE9TVCI6ImxvY2FsaG9zdCIsIkJMRU5ERVJfUE9SVCI6Ijk4NzYifX0%3D) (runs the server straight from this GitHub repo via `uvx`).
+**Fastest:** [Add to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D) (runs the server straight from this GitHub repo via `uvx`).
 
 **Or paste this** into Cursor → **Settings → MCP**, or as project `.cursor/mcp.json`:
 
@@ -78,7 +80,7 @@ Blender needs a GUI. `blender -b` will not run commands.
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/EmilvanDam/Plygon.git#subdirectory=blender-mcp",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=blender-mcp",
         "plygon-blender-mcp"
       ],
       "env": {
@@ -188,4 +190,4 @@ uv run python scripts/smoke_test.py --live   # Blender must be listening
 
 MIT. Fork it, ship it in a studio pipeline, put your name on the fork.
 
-**If Plygon MCP saves you a night of clicking, star [EmilvanDam/Plygon](https://github.com/EmilvanDam/Plygon).**
+**If Plygon MCP saves you a night of clicking, star [Plygonality/Plygon-mcp](https://github.com/Plygonality/Plygon-mcp).**

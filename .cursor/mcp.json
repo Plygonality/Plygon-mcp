@@ -1,5 +1,18 @@
 {
   "mcpServers": {
+    "plygon-blender": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${workspaceFolder}/blender-mcp",
+        "plygon-blender-mcp"
+      ],
+      "env": {
+        "BLENDER_HOST": "localhost",
+        "BLENDER_PORT": "9876"
+      }
+    },
     "plygon-houdini": {
       "command": "uv",
       "args": [

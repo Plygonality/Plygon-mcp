@@ -1,3 +1,3 @@
 """Plygon Houdini MCP — local Model Context Protocol server for Cursor."""
 
-__version__ = "1.0.0"
+__version__ = "0.1.0"

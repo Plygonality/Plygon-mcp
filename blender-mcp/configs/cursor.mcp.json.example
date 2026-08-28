@@ -4,7 +4,7 @@
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/EmilvanDam/Plygon.git#subdirectory=blender-mcp",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=blender-mcp",
         "plygon-blender-mcp"
       ],
       "env": {

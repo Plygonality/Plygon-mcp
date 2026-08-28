@@ -6,7 +6,7 @@
         "/c",
         "uvx",
         "--from",
-        "git+https://github.com/EmilvanDam/Plygon.git#subdirectory=houdini-mcp",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=houdini-mcp",
         "plygon-houdini-mcp"
       ],
       "env": {
