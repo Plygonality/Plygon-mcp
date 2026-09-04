@@ -1,5 +1,20 @@
 {
   "mcpServers": {
+    "houdini": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=houdini-mcp",
+        "plygon-houdini-mcp"
+      ],
+      "env": {
+        "HOUDINI_HOST": "127.0.0.1",
+        "HOUDINI_PORT": "9877",
+        "PYTHONUTF8": "1"
+      }
+    },
     "plygon-blender": {
       "command": "cmd",
       "args": [

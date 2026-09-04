@@ -56,22 +56,88 @@ Or hit **Fork** — this repo is MIT on purpose.
 
 ### 1. Drop the add-on into Blender
 
+1. Open **Blender** (the GUI app — not `blender -b`).
+2. Run this from the repo root:
+
 ```bash
 python blender-mcp/scripts/install_addon.py
 ```
 
-Manual: Blender → **Edit → Preferences → Add-ons → Install…** → `addon/blender_mcp_addon.py` → enable **Interface: Plygon Blender MCP**.
-
-In the 3D Viewport press `N` → **PlygonMCP** → **Start MCP Server**.  
-You want **Online · port 9876**.
-
-Blender needs a GUI. `blender -b` will not run commands.
+   **Or** **Edit → Preferences → Add-ons → Install…** → choose [`addon/blender_mcp_addon.py`](addon/blender_mcp_addon.py).
+3. Enable **Interface: Plygon Blender MCP** (search “Plygon”).
+4. In the 3D Viewport press **N** → **PlygonMCP** tab → **Start MCP Server**.
+5. Confirm **Online · port 9876**. Leave Blender open.
 
 ### 2. Connect Cursor
 
-**Fastest:** [Add to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D) (runs the server straight from this GitHub repo via `uvx`).
+Cursor does **not** use Settings → MCP. Use **Customize → MCPs**.
 
-**Or paste this** into Cursor → **Settings → MCP**, or as project `.cursor/mcp.json`:
+**Install uv first (one time).** Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+$env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+uvx --version
+```
+
+macOS / Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`. Do not `pip install uv`.
+
+Then **fully quit Cursor** (Windows: tray icon → Quit; Mac: **Cmd+Q**) and reopen it.
+
+**Wire it up:**
+
+1. In Cursor, click **Customize** in the **left sidebar**.
+2. Click the **MCPs** tab.
+3. Click **+ New MCP Server** (or **Add a Custom MCP Server**).
+4. Cursor opens `mcp.json`:
+   - Windows: `C:\Users\<your-windows-username>\.cursor\mcp.json`
+   - macOS / Linux: `~/.cursor/mcp.json`
+5. Paste a JSON block from below.
+6. **Ctrl+S** / **Cmd+S**.
+7. Return to **Customize → MCPs**. **plygon-blender** should be **Connected**, green, ~13 tools. Turn the toggle **on** if it is off.
+
+If `houdini` is already in the file, add `"plygon-blender"` next to it (comma after houdini’s `}`). Do not replace the whole file. `{ ...leave existing... }` is not valid JSON and will empty the MCP list.
+
+**Windows — Houdini + Blender (copy the whole file):**
+
+```json
+{
+  "mcpServers": {
+    "houdini": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=houdini-mcp",
+        "plygon-houdini-mcp"
+      ],
+      "env": {
+        "HOUDINI_HOST": "127.0.0.1",
+        "HOUDINI_PORT": "9877",
+        "PYTHONUTF8": "1"
+      }
+    },
+    "plygon-blender": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=blender-mcp",
+        "plygon-blender-mcp"
+      ],
+      "env": {
+        "BLENDER_HOST": "127.0.0.1",
+        "BLENDER_PORT": "9876",
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}
+```
+
+**macOS / Linux:**
 
 ```json
 {
@@ -84,7 +150,7 @@ Blender needs a GUI. `blender -b` will not run commands.
         "plygon-blender-mcp"
       ],
       "env": {
-        "BLENDER_HOST": "localhost",
+        "BLENDER_HOST": "127.0.0.1",
         "BLENDER_PORT": "9876"
       }
     }
@@ -92,12 +158,16 @@ Blender needs a GUI. `blender -b` will not run commands.
 }
 ```
 
-Need `uv` first? [Install uv](https://docs.astral.sh/uv/getting-started/installation/) (not `pip install uv`). GUI apps often miss PATH — if Cursor says `spawn uvx ENOENT`, put the absolute path from `which uvx` / `where uvx` in `"command"`.
+Red / **Needs Attention:** click the server → **Show Output**. `'uvx' is not recognized` → use the Windows JSON (it calls `%USERPROFILE%\\.local\\bin\\uvx.exe`) and fully quit Cursor. File also at [`../configs/cursor.mcp.windows.json`](../configs/cursor.mcp.windows.json).
 
-Windows: [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json) (`cmd /c uvx --from git+…`).  
-Hacking on a local clone: [`configs/cursor.mcp.json`](configs/cursor.mcp.json) or [`configs/cursor.mcp.pip.json`](configs/cursor.mcp.pip.json).
+Optional one-click: [Add to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D).
 
 ### 3. Make something
+
+1. Blender must still show **Online · port 9876**.
+2. Open a new Cursor **Agent** chat (not Ask).
+3. Paste: `Ping Blender. Do not call any other tools.` Approve the tool if asked.
+4. Then:
 
 > Create a studio-lit chrome Suzanne on a matte plane. Three-point lights. Frame the camera. Screenshot when it looks like a keyframe.
 
@@ -137,7 +207,7 @@ Prefer the structured tools for simple edits. Use `execute_blender_code` in smal
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `BLENDER_HOST` | `localhost` | Addon TCP host |
+| `BLENDER_HOST` | `127.0.0.1` | Addon TCP host |
 | `BLENDER_PORT` | `9876` | Must match the N-panel port |
 
 ---
@@ -178,11 +248,14 @@ uv run python scripts/smoke_test.py --live   # Blender must be listening
 
 | Symptom | Fix |
 |---------|-----|
-| `spawn uvx ENOENT` | Absolute path to `uvx`; fully quit Cursor and relaunch |
+| `spawn uvx ENOENT` / `'uvx' is not recognized` | Install [uv](https://docs.astral.sh/uv/getting-started/installation/), use `%USERPROFILE%\\.local\\bin\\uvx.exe` on Windows, fully quit Cursor (tray icon too) |
+| MCP list empties after Ctrl+S | `mcp.json` is invalid JSON. Don’t paste `{ ...leave existing... }` placeholders. Add `plygon-blender` next to `houdini` |
+| `Extra data: line 1 column 51` | Reinstall add-on 1.0.1+ and restart the MCP server (concatenated JSON from parallel tools) |
 | `Could not connect to Blender` | Add-on enabled? **Start MCP Server**? Port = `BLENDER_PORT`? |
 | Timeouts | Keep Blender in the foreground; smaller code chunks |
 | Add-on missing | Restart Blender; search Preferences for “Plygon” |
 | Black screenshots | Keep a 3D Viewport visible |
+| Stale server after a git update | `uv cache clean` then fully quit Cursor |
 
 ---
 

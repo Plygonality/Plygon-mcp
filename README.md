@@ -61,20 +61,130 @@ Cursor agent  →  plygon-blender-mcp  →  localhost:9876  →  Blender add-on 
 
 ### Setup
 
-**1. Install the add-on**
+Do these in order. Cursor’s MCP screen is **Customize → MCPs**, not Settings.
 
-```bash
-python blender-mcp/scripts/install_addon.py
+#### 1. Install uv (one time)
+
+Cursor launches the Blender bridge with `uvx`. Install uv, then **fully quit Cursor** so it can see the new program.
+
+**Windows** — open PowerShell and paste:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+$env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+uvx --version
 ```
 
-Blender → Preferences → Add-ons → enable **Plygon Blender MCP**.  
-3D Viewport → `N` → **PlygonMCP** → **Start MCP Server**.
+You should see a version number. Then quit Cursor from the **system tray** (right-click the Cursor icon near the clock → Quit), not just the window. Reopen Cursor.
 
-**2. Connect Cursor**
+**macOS / Linux:**
 
-[Add Blender to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D) · or paste [`blender-mcp/configs/cursor.mcp.git.json`](blender-mcp/configs/cursor.mcp.git.json) into **Settings → MCP**.
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uvx --version
+```
 
-**3. Try it**
+Quit Cursor completely (**Cmd+Q** on Mac) and reopen. Do not `pip install uv`.
+
+#### 2. Install the Blender add-on
+
+1. Open **Blender** (the normal GUI app — not `blender -b`).
+2. Either run `python blender-mcp/scripts/install_addon.py` from this repo, **or** **Edit → Preferences → Add-ons → Install…** and choose [`blender-mcp/addon/blender_mcp_addon.py`](blender-mcp/addon/blender_mcp_addon.py).
+3. Enable **Interface: Plygon Blender MCP** (search “Plygon”).
+4. In the 3D Viewport press **N**.
+5. Open the **PlygonMCP** tab in the sidebar.
+6. Click **Start MCP Server**.
+7. Confirm it says **Online · port 9876**. Leave this Blender window open.
+
+#### 3. Connect Cursor (Customize → MCPs)
+
+1. In Cursor, click **Customize** in the **left sidebar** (same row as Plugins, Skills, Rules).
+2. Click the **MCPs** tab.
+3. Click **+ New MCP Server** (sometimes labeled **Add a Custom MCP Server**).
+4. Cursor opens `mcp.json`:
+   - Windows: `C:\Users\<your-windows-username>\.cursor\mcp.json`
+   - macOS / Linux: `~/.cursor/mcp.json`
+5. Paste one of the JSON blocks below.
+6. Press **Ctrl+S** (Windows) or **Cmd+S** (Mac).
+7. Go back to **Customize → MCPs**. **plygon-blender** should appear under **Connected**, green, with tools enabled (~13).
+8. If the toggle is off, turn it **on**.
+
+**If `houdini` (or anything else) is already in `mcp.json`:** do not delete it and do not replace the whole file. After that server’s closing `}`, add a comma, then the `"plygon-blender"` block inside `"mcpServers"`. Placeholder text like `{ ...leave existing... }` is not JSON — saving it wipes every MCP.
+
+**Windows — copy-paste this entire file** if you want Houdini and Blender together:
+
+```json
+{
+  "mcpServers": {
+    "houdini": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=houdini-mcp",
+        "plygon-houdini-mcp"
+      ],
+      "env": {
+        "HOUDINI_HOST": "127.0.0.1",
+        "HOUDINI_PORT": "9877",
+        "PYTHONUTF8": "1"
+      }
+    },
+    "plygon-blender": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=blender-mcp",
+        "plygon-blender-mcp"
+      ],
+      "env": {
+        "BLENDER_HOST": "127.0.0.1",
+        "BLENDER_PORT": "9876",
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}
+```
+
+**macOS / Linux — copy-paste this:**
+
+```json
+{
+  "mcpServers": {
+    "plygon-blender": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=blender-mcp",
+        "plygon-blender-mcp"
+      ],
+      "env": {
+        "BLENDER_HOST": "127.0.0.1",
+        "BLENDER_PORT": "9876"
+      }
+    }
+  }
+}
+```
+
+Same files live at [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json) and [`blender-mcp/configs/cursor.mcp.git.json`](blender-mcp/configs/cursor.mcp.git.json). Optional one-click: [Add Blender to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D).
+
+**If it is red / Needs Attention:** click the server → **Show Output**. `'uvx' is not recognized` means Cursor still cannot see uv — use the Windows JSON above and fully quit Cursor. If the MCP list goes empty, `mcp.json` is invalid; **Ctrl+Z**, fix braces/commas, save again.
+
+#### 4. Try it
+
+1. Keep Blender open with **Start MCP Server** already clicked (**Online · port 9876**).
+2. In Cursor, open a new **Agent** chat (not Ask / not this Cloud Agent).
+3. Paste:
+
+> Ping Blender. Do not call any other tools.
+
+4. Approve the tool call if Cursor asks.
+5. Then paste:
 
 > Create a studio-lit chrome Suzanne. Screenshot when it looks like a keyframe.
 
@@ -118,7 +228,9 @@ Houdini needs a GUI session — batch `hython` without the listener won't accept
 
 **2. Connect Cursor**
 
-Paste [`houdini-mcp/configs/cursor.mcp.git.json`](houdini-mcp/configs/cursor.mcp.git.json) into **Settings → MCP**, or use the project [`.cursor/mcp.json`](.cursor/mcp.json).
+Same as Blender: **Customize** (sidebar) → **MCPs** → **+ New MCP Server** → edit `mcp.json` → **Ctrl+S**. Add `"plygon-houdini"` next to any existing blender server; do not replace the whole file.
+
+**Windows:** use [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json) (both DCCs). **macOS / Linux:** paste:
 
 ```json
 {
@@ -131,13 +243,15 @@ Paste [`houdini-mcp/configs/cursor.mcp.git.json`](houdini-mcp/configs/cursor.mcp
         "plygon-houdini-mcp"
       ],
       "env": {
-        "HOUDINI_HOST": "localhost",
+        "HOUDINI_HOST": "127.0.0.1",
         "HOUDINI_PORT": "9877"
       }
     }
   }
 }
 ```
+
+Opening this repo also registers both via [`.cursor/mcp.json`](.cursor/mcp.json).
 
 **3. Try it**
 
