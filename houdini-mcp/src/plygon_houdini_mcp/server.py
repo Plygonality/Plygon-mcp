@@ -26,7 +26,7 @@ logger = logging.getLogger("PlygonHoudiniMCP")
 async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:
     logger.info(
         "Plygon Houdini MCP starting (HOUDINI_HOST=%s HOUDINI_PORT=%s)",
-        os.getenv("HOUDINI_HOST", "localhost"),
+        os.getenv("HOUDINI_HOST", "127.0.0.1"),
         os.getenv("HOUDINI_PORT", "9877"),
     )
     try:

@@ -14,6 +14,7 @@ def test_addon_file_exists_and_has_bl_info():
     addon = (ROOT / "addon" / "blender_mcp_addon.py").read_text(encoding="utf-8")
     assert 'bl_info = {' in addon
     assert "Plygon Blender MCP" in addon
+    assert "_extract_json_objects" in addon
     assert "PLYGONMCP_OT_StartServer" in addon
 
 
@@ -21,6 +22,23 @@ def test_package_version():
     import plygon_blender_mcp
 
     assert plygon_blender_mcp.__version__
+
+
+def test_extract_one_json_concatenated_payloads():
+    from plygon_blender_mcp.connection import extract_one_json
+
+    ping = json.dumps({"status": "success", "result": {"pong": True}})
+    scene = json.dumps({"status": "success", "result": {"objects": ["Cube"]}})
+    blob = (ping + scene).encode("utf-8")
+
+    with pytest.raises(json.JSONDecodeError, match="Extra data"):
+        json.loads(blob.decode("utf-8"))
+
+    first, rest = extract_one_json(blob)
+    assert first == {"status": "success", "result": {"pong": True}}
+    second, leftover = extract_one_json(rest)
+    assert second == {"status": "success", "result": {"objects": ["Cube"]}}
+    assert leftover.strip() == b""
 
 
 def test_connection_receive_complete_json():
@@ -55,7 +73,90 @@ def test_connection_receive_complete_json():
     t.join(timeout=2)
 
 
-def test_server_tools_registered():
+def test_connection_receive_concatenated_json():
+    from plygon_blender_mcp.connection import BlenderConnection
+
+    ping = json.dumps({"status": "success", "result": {"pong": True}})
+    scene = json.dumps({"status": "success", "result": {"objects": ["Cube"]}})
+    blob = (ping + scene).encode("utf-8")
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    host, port = server.getsockname()
+
+    def serve():
+        client, _ = server.accept()
+        with client:
+            client.recv(65536)
+            client.sendall(blob)
+            try:
+                client.recv(65536)
+            except Exception:
+                pass
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+
+    conn = BlenderConnection(host=host, port=port)
+    assert conn.connect()
+    assert conn.send_command("ping") == {"pong": True}
+    assert conn.send_command("get_scene_info") == {"objects": ["Cube"]}
+    conn.disconnect()
+    server.close()
+    t.join(timeout=2)
+
+
+def test_resolve_loopback_host():
+    from plygon_blender_mcp.connection import resolve_loopback_host
+
+    assert resolve_loopback_host("localhost") == "127.0.0.1"
+    assert resolve_loopback_host("::1") == "127.0.0.1"
+    assert resolve_loopback_host("127.0.0.1") == "127.0.0.1"
+    assert resolve_loopback_host("10.0.0.5") == "10.0.0.5"
+
+
+def test_blender_error_keeps_connection():
+    from plygon_blender_mcp.connection import BlenderConnection
+
+    err = (json.dumps({"status": "error", "message": "nope"}) + "\n").encode("utf-8")
+    ok = (json.dumps({"status": "success", "result": {"pong": True}}) + "\n").encode("utf-8")
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    host, port = server.getsockname()
+
+    def serve():
+        client, _ = server.accept()
+        with client:
+            client.recv(65536)
+            client.sendall(err)
+            client.recv(65536)
+            client.sendall(ok)
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+
+    conn = BlenderConnection(host=host, port=port)
+    assert conn.connect()
+    with pytest.raises(RuntimeError, match="nope"):
+        conn.send_command("ping")
+    assert conn.sock is not None
+    assert conn.send_command("ping") == {"pong": True}
+    conn.disconnect()
+    server.close()
+    t.join(timeout=2)
+
+
+def test_windows_mcp_config_uses_uvx_exe():
+    cfg = json.loads((ROOT.parent / "configs" / "cursor.mcp.windows.json").read_text(encoding="utf-8"))
+    blender = cfg["mcpServers"]["plygon-blender"]
+    assert "%USERPROFILE%\\.local\\bin\\uvx.exe" in blender["args"]
+    assert blender["env"]["BLENDER_HOST"] == "127.0.0.1"
+    assert "houdini" in cfg["mcpServers"]
     from plygon_blender_mcp.server import mcp
 
     manager = getattr(mcp, "_tool_manager", None)

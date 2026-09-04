@@ -16,6 +16,7 @@ def test_listener_file_exists():
     )
     assert "HoudiniMCPServer" in listener
     assert "executeInMainThreadWithResult" in listener
+    assert "_extract_json_objects" in listener
     assert "Plygon Houdini MCP" in listener
 
 
@@ -36,6 +37,23 @@ def test_package_version():
     import plygon_houdini_mcp
 
     assert plygon_houdini_mcp.__version__
+
+
+def test_extract_one_json_concatenated_payloads():
+    from plygon_houdini_mcp.connection import extract_one_json
+
+    ping = json.dumps({"status": "success", "result": {"pong": True}})
+    scene = json.dumps({"status": "success", "result": {"nodes": ["/obj"]}})
+    blob = (ping + scene).encode("utf-8")
+
+    with pytest.raises(json.JSONDecodeError, match="Extra data"):
+        json.loads(blob.decode("utf-8"))
+
+    first, rest = extract_one_json(blob)
+    assert first == {"status": "success", "result": {"pong": True}}
+    second, leftover = extract_one_json(rest)
+    assert second == {"status": "success", "result": {"nodes": ["/obj"]}}
+    assert leftover.strip() == b""
 
 
 def test_connection_receive_complete_json():
@@ -64,6 +82,81 @@ def test_connection_receive_complete_json():
     assert conn.connect()
     result = conn.send_command("ping")
     assert result == {"pong": True}
+    conn.disconnect()
+    server.close()
+    t.join(timeout=2)
+
+
+def test_connection_receive_concatenated_json():
+    from plygon_houdini_mcp.connection import HoudiniConnection
+
+    ping = json.dumps({"status": "success", "result": {"pong": True}})
+    scene = json.dumps({"status": "success", "result": {"nodes": ["/obj"]}})
+    blob = (ping + scene).encode("utf-8")
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    host, port = server.getsockname()
+
+    def serve():
+        client, _ = server.accept()
+        with client:
+            client.recv(65536)
+            client.sendall(blob)
+            try:
+                client.recv(65536)
+            except Exception:
+                pass
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+
+    conn = HoudiniConnection(host=host, port=port)
+    assert conn.connect()
+    assert conn.send_command("ping") == {"pong": True}
+    assert conn.send_command("get_scene_info") == {"nodes": ["/obj"]}
+    conn.disconnect()
+    server.close()
+    t.join(timeout=2)
+
+
+def test_resolve_loopback_host():
+    from plygon_houdini_mcp.connection import resolve_loopback_host
+
+    assert resolve_loopback_host("localhost") == "127.0.0.1"
+
+
+def test_houdini_error_keeps_connection():
+    from plygon_houdini_mcp.connection import HoudiniConnection
+
+    err = (json.dumps({"status": "error", "message": "nope"}) + "\n").encode("utf-8")
+    ok = (json.dumps({"status": "success", "result": {"pong": True}}) + "\n").encode("utf-8")
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    host, port = server.getsockname()
+
+    def serve():
+        client, _ = server.accept()
+        with client:
+            client.recv(65536)
+            client.sendall(err)
+            client.recv(65536)
+            client.sendall(ok)
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+
+    conn = HoudiniConnection(host=host, port=port)
+    assert conn.connect()
+    with pytest.raises(RuntimeError, match="nope"):
+        conn.send_command("ping")
+    assert conn.sock is not None
+    assert conn.send_command("ping") == {"pong": True}
     conn.disconnect()
     server.close()
     t.join(timeout=2)

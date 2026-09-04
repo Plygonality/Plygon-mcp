@@ -7,6 +7,7 @@ PlygonMCP shelf tab → Start MCP Server.
 
 from __future__ import annotations
 
+import inspect
 import io
 import json
 import os
@@ -27,18 +28,48 @@ except ImportError:
     )
 
 ADDON_PROTOCOL_VERSION = 1
-DEFAULT_HOST = "localhost"
+DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 9877
 
 _server = None
 _event_loop_callback_registered = False
 
 
+def _encode_message(obj) -> bytes:
+    return (json.dumps(obj, default=str) + "\n").encode("utf-8")
+
+
+def _extract_json_objects(buffer: bytes):
+    """Split concatenated JSON values. Agents often send two commands in one packet."""
+    objects = []
+    try:
+        text = buffer.decode("utf-8")
+    except UnicodeDecodeError:
+        return objects, buffer
+    decoder = json.JSONDecoder()
+    idx = 0
+    length = len(text)
+    while idx < length:
+        while idx < length and text[idx].isspace():
+            idx += 1
+        if idx >= length:
+            return objects, b""
+        try:
+            obj, end = decoder.raw_decode(text, idx)
+        except json.JSONDecodeError:
+            break
+        if end <= idx:
+            break
+        objects.append(obj)
+        idx = end
+    return objects, text[idx:].encode("utf-8")
+
+
 class HoudiniMCPServer:
     """Accept JSON commands over TCP and run them on Houdini's main thread."""
 
     def __init__(self, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
-        self.host = host
+        self.host = "127.0.0.1" if host in {"localhost", "::1", ""} else host
         self.port = port
         self.running = False
         self.socket = None
@@ -147,13 +178,13 @@ class HoudiniMCPServer:
                 response = hdefereval.executeInMainThreadWithResult(
                     self.execute_command, (command,), {}
                 )
-                payload = json.dumps(response, default=str)
+                payload = _encode_message(response)
             except Exception as e:
                 traceback.print_exc()
-                payload = json.dumps({"status": "error", "message": str(e)})
+                payload = _encode_message({"status": "error", "message": str(e)})
 
             try:
-                client.sendall(payload.encode("utf-8"))
+                client.sendall(payload)
             except Exception:
                 print("PlygonMCP: failed to send response (client gone)")
 
@@ -172,13 +203,12 @@ class HoudiniMCPServer:
                     if not data:
                         break
                     buffer += data
-                    try:
-                        command = json.loads(buffer.decode("utf-8"))
-                        buffer = b""
+                    commands, buffer = _extract_json_objects(buffer)
+                    for command in commands:
+                        if not isinstance(command, dict):
+                            continue
                         print(f"PlygonMCP: queued {command.get('type')}")
                         self.command_queue.put((command, client))
-                    except (json.JSONDecodeError, UnicodeDecodeError):
-                        pass
                 except socket.timeout:
                     continue
                 except Exception as e:
@@ -226,8 +256,25 @@ class HoudiniMCPServer:
         if not handler:
             return {"status": "error", "message": f"Unknown command type: {cmd_type}"}
 
-        result = handler(**params) if cmd_type != "ping" else handlers["ping"]()
+        result = self._invoke_handler(handler, cmd_type, params)
         return {"status": "success", "result": result}
+
+    def _invoke_handler(self, handler, cmd_type, params):
+        if cmd_type == "ping":
+            return handler()
+        params = params or {}
+        try:
+            sig = inspect.signature(handler)
+        except (TypeError, ValueError):
+            return handler(**params)
+        if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
+            return handler(**params)
+        allowed = {
+            name
+            for name, p in sig.parameters.items()
+            if p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        }
+        return handler(**{k: v for k, v in params.items() if k in allowed})
 
     def get_addon_info(self):
         return {

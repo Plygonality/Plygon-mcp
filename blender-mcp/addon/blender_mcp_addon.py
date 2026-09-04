@@ -10,6 +10,7 @@ In the 3D Viewport press N → PlygonMCP tab → Start MCP Server.
 from __future__ import annotations
 
 import bpy
+import inspect
 import io
 import json
 import mathutils
@@ -26,7 +27,7 @@ from bpy.props import IntProperty, BoolProperty, StringProperty
 bl_info = {
     "name": "Plygon Blender MCP",
     "author": "Plygon",
-    "version": (1, 0, 0),
+    "version": (1, 0, 1),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar > PlygonMCP",
     "description": "Local MCP bridge so Cursor agents can drive Blender via bpy",
@@ -39,11 +40,41 @@ DEFAULT_PORT = 9876
 _server = None
 
 
+def _encode_message(obj) -> bytes:
+    return (json.dumps(obj, default=str) + "\n").encode("utf-8")
+
+
+def _extract_json_objects(buffer: bytes):
+    """Split concatenated JSON values. Agents often send two commands in one packet."""
+    objects = []
+    try:
+        text = buffer.decode("utf-8")
+    except UnicodeDecodeError:
+        return objects, buffer
+    decoder = json.JSONDecoder()
+    idx = 0
+    length = len(text)
+    while idx < length:
+        while idx < length and text[idx].isspace():
+            idx += 1
+        if idx >= length:
+            return objects, b""
+        try:
+            obj, end = decoder.raw_decode(text, idx)
+        except json.JSONDecodeError:
+            break
+        if end <= idx:
+            break
+        objects.append(obj)
+        idx = end
+    return objects, text[idx:].encode("utf-8")
+
+
 class BlenderMCPServer:
     """Accept JSON commands over TCP and run them on Blender's main thread."""
 
-    def __init__(self, host: str = "localhost", port: int = DEFAULT_PORT):
-        self.host = host
+    def __init__(self, host: str = "127.0.0.1", port: int = DEFAULT_PORT):
+        self.host = "127.0.0.1" if host in {"localhost", "::1", ""} else host
         self.port = port
         self.running = False
         self.socket = None
@@ -154,13 +185,13 @@ class BlenderMCPServer:
 
             try:
                 response = self.execute_command(command)
-                payload = json.dumps(response)
+                payload = _encode_message(response)
             except Exception as e:
                 traceback.print_exc()
-                payload = json.dumps({"status": "error", "message": str(e)})
+                payload = _encode_message({"status": "error", "message": str(e)})
 
             try:
-                client.sendall(payload.encode("utf-8"))
+                client.sendall(payload)
             except Exception:
                 print("PlygonMCP: failed to send response (client gone)")
 
@@ -179,13 +210,12 @@ class BlenderMCPServer:
                     if not data:
                         break
                     buffer += data
-                    try:
-                        command = json.loads(buffer.decode("utf-8"))
-                        buffer = b""
+                    commands, buffer = _extract_json_objects(buffer)
+                    for command in commands:
+                        if not isinstance(command, dict):
+                            continue
                         print(f"PlygonMCP: queued {command.get('type')}")
                         self.command_queue.put((command, client))
-                    except (json.JSONDecodeError, UnicodeDecodeError):
-                        pass
                 except socket.timeout:
                     continue
                 except Exception as e:
@@ -230,8 +260,25 @@ class BlenderMCPServer:
         if not handler:
             return {"status": "error", "message": f"Unknown command type: {cmd_type}"}
 
-        result = handler(**params) if cmd_type != "ping" else handlers["ping"]()
+        result = self._invoke_handler(handler, cmd_type, params)
         return {"status": "success", "result": result}
+
+    def _invoke_handler(self, handler, cmd_type, params):
+        if cmd_type == "ping":
+            return handler()
+        params = params or {}
+        try:
+            sig = inspect.signature(handler)
+        except (TypeError, ValueError):
+            return handler(**params)
+        if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
+            return handler(**params)
+        allowed = {
+            name
+            for name, p in sig.parameters.items()
+            if p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        }
+        return handler(**{k: v for k, v in params.items() if k in allowed})
 
     def get_addon_info(self):
         return {
@@ -614,7 +661,7 @@ class PLYGONMCP_OT_StartServer(bpy.types.Operator):
             self.report({"INFO"}, "MCP server already running")
             return {"FINISHED"}
 
-        _server = BlenderMCPServer(host="localhost", port=scene.plygonmcp_port)
+        _server = BlenderMCPServer(host="127.0.0.1", port=scene.plygonmcp_port)
         _server.start()
         scene.plygonmcp_server_running = True
         self.report({"INFO"}, f"PlygonMCP listening on port {scene.plygonmcp_port}")
@@ -682,7 +729,7 @@ def register():
         max=65535,
     )
     bpy.types.Scene.plygonmcp_server_running = BoolProperty(default=False)
-    bpy.types.Scene.plygonmcp_host = StringProperty(default="localhost")
+    bpy.types.Scene.plygonmcp_host = StringProperty(default="127.0.0.1")
 
 
 def unregister():

@@ -9,7 +9,7 @@
         "plygon-blender-mcp"
       ],
       "env": {
-        "BLENDER_HOST": "localhost",
+        "BLENDER_HOST": "127.0.0.1",
         "BLENDER_PORT": "9876"
       }
     },
@@ -22,7 +22,7 @@
         "plygon-houdini-mcp"
       ],
       "env": {
-        "HOUDINI_HOST": "localhost",
+        "HOUDINI_HOST": "127.0.0.1",
         "HOUDINI_PORT": "9877"
       }
     }

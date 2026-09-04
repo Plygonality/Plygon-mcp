@@ -27,7 +27,7 @@ logger = logging.getLogger("PlygonBlenderMCP")
 async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:
     logger.info(
         "Plygon Blender MCP starting (BLENDER_HOST=%s BLENDER_PORT=%s)",
-        os.getenv("BLENDER_HOST", "localhost"),
+        os.getenv("BLENDER_HOST", "127.0.0.1"),
         os.getenv("BLENDER_PORT", "9876"),
     )
     try:
