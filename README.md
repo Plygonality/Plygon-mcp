@@ -72,11 +72,18 @@ Blender → Preferences → Add-ons → enable **Plygon Blender MCP**.
 
 **2. Connect Cursor**
 
-[Add Blender to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D) · or paste [`blender-mcp/configs/cursor.mcp.git.json`](blender-mcp/configs/cursor.mcp.git.json) into **Settings → MCP**.
+In Cursor: **Customize** (sidebar) → **MCPs** → **+ New MCP Server**. That opens `~/.cursor/mcp.json` (on Windows: `C:\Users\<you>\.cursor\mcp.json`).
 
-**Windows:** paste [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json) (Blender + Houdini). If Houdini is already connected, add only the `plygon-blender` block next to it — do not replace the whole file.
+Paste the blender server in there, then **Ctrl+S**. The MCPs tab should show **plygon-blender** with a green light and tools enabled.
 
-Need `uv` first? [Install uv](https://docs.astral.sh/uv/getting-started/installation/) (not `pip install uv`). Fully quit Cursor after installing. GUI apps often miss PATH — Windows configs use `%USERPROFILE%\\.local\\bin\\uvx.exe`.
+- **macOS / Linux:** paste [`blender-mcp/configs/cursor.mcp.git.json`](blender-mcp/configs/cursor.mcp.git.json)
+- **Windows:** paste [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json) (Blender + Houdini)
+
+If Houdini is already listed, add only the `"plygon-blender": { ... }` block next to it — a comma after the houdini block, then blender. Do not replace the whole file. Placeholder text like `{ ...leave existing... }` is not JSON and will wipe every MCP.
+
+Need `uv` first? [Install uv](https://docs.astral.sh/uv/getting-started/installation/) (not `pip install uv`). Fully quit Cursor after installing (tray icon too). On Windows the config calls `%USERPROFILE%\\.local\\bin\\uvx.exe` because Cursor’s GUI often misses PATH.
+
+One-click alternative: [Add Blender to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D).
 
 **3. Try it**
 
@@ -122,7 +129,9 @@ Houdini needs a GUI session — batch `hython` without the listener won't accept
 
 **2. Connect Cursor**
 
-Paste [`houdini-mcp/configs/cursor.mcp.git.json`](houdini-mcp/configs/cursor.mcp.git.json) into **Settings → MCP**, or use the project [`.cursor/mcp.json`](.cursor/mcp.json).
+**Customize** (sidebar) → **MCPs** → **+ New MCP Server**, then paste [`houdini-mcp/configs/cursor.mcp.git.json`](houdini-mcp/configs/cursor.mcp.git.json) into `mcp.json` and save. If Blender is already there, add `"plygon-houdini"` next to it — don’t replace the whole file.
+
+Windows: [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json). Opening this repo also registers both DCCs via [`.cursor/mcp.json`](.cursor/mcp.json).
 
 ```json
 {

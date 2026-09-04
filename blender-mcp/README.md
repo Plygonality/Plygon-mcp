@@ -69,9 +69,9 @@ Blender needs a GUI. `blender -b` will not run commands.
 
 ### 2. Connect Cursor
 
-**Fastest:** [Add to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D) (runs the server straight from this GitHub repo via `uvx`).
+Open **Customize** (sidebar) → **MCPs** → **+ New MCP Server**. Cursor opens `~/.cursor/mcp.json`. Paste the JSON below, **Ctrl+S**, and wait for **plygon-blender** to show a green light with tools enabled.
 
-**Or paste this** into Cursor → **Settings → MCP**, or as project `.cursor/mcp.json`:
+If another server (e.g. `houdini`) is already in that file, add `"plygon-blender"` next to it. Do not replace the whole file.
 
 ```json
 {
@@ -92,9 +92,11 @@ Blender needs a GUI. `blender -b` will not run commands.
 }
 ```
 
-Need `uv` first? [Install uv](https://docs.astral.sh/uv/getting-started/installation/) (not `pip install uv`). GUI apps often miss PATH — if Cursor says `spawn uvx ENOENT` or `'uvx' is not recognized`, use [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json) (`%USERPROFILE%\\.local\\bin\\uvx.exe`) and fully quit Cursor.
+Need `uv` first? [Install uv](https://docs.astral.sh/uv/getting-started/installation/) (not `pip install uv`). GUI apps often miss PATH — if Cursor says `spawn uvx ENOENT` or `'uvx' is not recognized`, use [`../configs/cursor.mcp.windows.json`](../configs/cursor.mcp.windows.json) (`%USERPROFILE%\\.local\\bin\\uvx.exe`) and fully quit Cursor (tray icon too).
 
-Windows: [`configs/cursor.mcp.windows.json`](../configs/cursor.mcp.windows.json) (Blender + Houdini). Add the blender block next to any existing `houdini` server; don’t replace the whole file.
+Windows (Blender + Houdini): [`../configs/cursor.mcp.windows.json`](../configs/cursor.mcp.windows.json). Add the blender block next to any existing `houdini` server.
+
+One-click: [Add to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D).
 
 ### 3. Make something
 
