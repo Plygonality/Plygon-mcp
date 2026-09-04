@@ -12,10 +12,17 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("PlygonBlenderMCP")
 
-DEFAULT_HOST = "localhost"
+DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 9876
 
 _state_lock = threading.Lock()
+
+
+def resolve_loopback_host(host: str) -> str:
+    """Windows 'localhost' can be IPv6 (::1) while Blender binds IPv4."""
+    if host in {"localhost", "::1", ""}:
+        return "127.0.0.1"
+    return host
 
 
 def encode_message(obj: Any) -> bytes:
@@ -75,18 +82,20 @@ class BlenderConnection:
         if self.sock:
             return True
         try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((self.host, self.port))
+            host = resolve_loopback_host(self.host)
+            self.sock = socket.create_connection((host, self.port), timeout=10)
             self._recv_buf = b""
-            logger.info("Connected to Blender at %s:%s", self.host, self.port)
+            logger.info("Connected to Blender at %s:%s", host, self.port)
             return True
         except Exception as e:
             logger.error("Failed to connect to Blender: %s", e)
-            self.sock = None
-            self._recv_buf = b""
+            self._reset_socket()
             return False
 
     def disconnect(self) -> None:
+        self._reset_socket()
+
+    def _reset_socket(self) -> None:
         if self.sock:
             try:
                 self.sock.close()
@@ -142,19 +151,18 @@ class BlenderConnection:
                 raise RuntimeError(response.get("message", "Unknown error from Blender"))
             return response.get("result") or {}
         except socket.timeout as e:
-            self.sock = None
-            self._recv_buf = b""
+            self._reset_socket()
             raise TimeoutError(
                 "Timeout waiting for Blender. Simplify the request, or ensure Blender "
                 "is running with a GUI (not blender -b)."
             ) from e
         except (ConnectionError, BrokenPipeError, ConnectionResetError) as e:
-            self.sock = None
-            self._recv_buf = b""
+            self._reset_socket()
             raise ConnectionError(f"Connection to Blender lost: {e}") from e
+        except RuntimeError:
+            raise
         except Exception:
-            self.sock = None
-            self._recv_buf = b""
+            self._reset_socket()
             raise
 
 

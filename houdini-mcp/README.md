@@ -78,7 +78,7 @@ Paste this into Cursor → **Settings → MCP**, or as project `.cursor/mcp.json
         "plygon-houdini-mcp"
       ],
       "env": {
-        "HOUDINI_HOST": "localhost",
+        "HOUDINI_HOST": "127.0.0.1",
         "HOUDINI_PORT": "9877"
       }
     }
@@ -86,7 +86,7 @@ Paste this into Cursor → **Settings → MCP**, or as project `.cursor/mcp.json
 }
 ```
 
-Need `uv` first? [Install uv](https://docs.astral.sh/uv/getting-started/installation/). GUI apps often miss PATH — if Cursor says `spawn uvx ENOENT`, put the absolute path from `which uvx` in `"command"`.
+Need `uv` first? [Install uv](https://docs.astral.sh/uv/getting-started/installation/). GUI apps often miss PATH — on Windows use [`../configs/cursor.mcp.windows.json`](../configs/cursor.mcp.windows.json).
 
 **Local clone:** [`configs/cursor.mcp.json`](configs/cursor.mcp.json)  
 **Windows:** [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json)  
@@ -136,7 +136,7 @@ Prefer structured tools for simple edits. Use `execute_houdini_code` in small st
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `HOUDINI_HOST` | `localhost` | Listener TCP host (MCP server side) |
+| `HOUDINI_HOST` | `127.0.0.1` | Listener TCP host (MCP server side) |
 | `HOUDINI_PORT` | `9877` | Must match the shelf / listener port |
 
 ---
@@ -177,7 +177,7 @@ uv run python scripts/smoke_test.py --live   # Houdini listener must be running
 
 | Symptom | Fix |
 |---------|-----|
-| `spawn uvx ENOENT` | Absolute path to `uvx`; fully quit Cursor and relaunch |
+| `spawn uvx ENOENT` / `'uvx' is not recognized` | Use `%USERPROFILE%\\.local\\bin\\uvx.exe`; fully quit Cursor |
 | `Could not connect to Houdini` | Package installed? Shelf **Start MCP Server** clicked? Port = `9877`? |
 | Timeouts | Keep Houdini in the foreground; smaller code chunks |
 | Import errors in shelf | Restart Houdini after install; check `packages/plygon_houdini_mcp/` exists |

@@ -9,7 +9,7 @@
         "plygon-houdini-mcp"
       ],
       "env": {
-        "HOUDINI_HOST": "localhost",
+        "HOUDINI_HOST": "127.0.0.1",
         "HOUDINI_PORT": "9877"
       }
     }

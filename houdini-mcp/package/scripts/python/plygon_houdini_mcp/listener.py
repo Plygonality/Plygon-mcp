@@ -7,6 +7,7 @@ PlygonMCP shelf tab → Start MCP Server.
 
 from __future__ import annotations
 
+import inspect
 import io
 import json
 import os
@@ -27,7 +28,7 @@ except ImportError:
     )
 
 ADDON_PROTOCOL_VERSION = 1
-DEFAULT_HOST = "localhost"
+DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 9877
 
 _server = None
@@ -68,7 +69,7 @@ class HoudiniMCPServer:
     """Accept JSON commands over TCP and run them on Houdini's main thread."""
 
     def __init__(self, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
-        self.host = host
+        self.host = "127.0.0.1" if host in {"localhost", "::1", ""} else host
         self.port = port
         self.running = False
         self.socket = None
@@ -255,8 +256,25 @@ class HoudiniMCPServer:
         if not handler:
             return {"status": "error", "message": f"Unknown command type: {cmd_type}"}
 
-        result = handler(**params) if cmd_type != "ping" else handlers["ping"]()
+        result = self._invoke_handler(handler, cmd_type, params)
         return {"status": "success", "result": result}
+
+    def _invoke_handler(self, handler, cmd_type, params):
+        if cmd_type == "ping":
+            return handler()
+        params = params or {}
+        try:
+            sig = inspect.signature(handler)
+        except (TypeError, ValueError):
+            return handler(**params)
+        if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
+            return handler(**params)
+        allowed = {
+            name
+            for name, p in sig.parameters.items()
+            if p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        }
+        return handler(**{k: v for k, v in params.items() if k in allowed})
 
     def get_addon_info(self):
         return {

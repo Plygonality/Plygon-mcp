@@ -74,6 +74,10 @@ Blender → Preferences → Add-ons → enable **Plygon Blender MCP**.
 
 [Add Blender to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D) · or paste [`blender-mcp/configs/cursor.mcp.git.json`](blender-mcp/configs/cursor.mcp.git.json) into **Settings → MCP**.
 
+**Windows:** paste [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json) (Blender + Houdini). If Houdini is already connected, add only the `plygon-blender` block next to it — do not replace the whole file.
+
+Need `uv` first? [Install uv](https://docs.astral.sh/uv/getting-started/installation/) (not `pip install uv`). Fully quit Cursor after installing. GUI apps often miss PATH — Windows configs use `%USERPROFILE%\\.local\\bin\\uvx.exe`.
+
 **3. Try it**
 
 > Create a studio-lit chrome Suzanne. Screenshot when it looks like a keyframe.
@@ -131,7 +135,7 @@ Paste [`houdini-mcp/configs/cursor.mcp.git.json`](houdini-mcp/configs/cursor.mcp
         "plygon-houdini-mcp"
       ],
       "env": {
-        "HOUDINI_HOST": "localhost",
+        "HOUDINI_HOST": "127.0.0.1",
         "HOUDINI_PORT": "9877"
       }
     }

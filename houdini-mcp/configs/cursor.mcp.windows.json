@@ -4,13 +4,13 @@
       "command": "cmd",
       "args": [
         "/c",
-        "uvx",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
         "--from",
         "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=houdini-mcp",
         "plygon-houdini-mcp"
       ],
       "env": {
-        "HOUDINI_HOST": "localhost",
+        "HOUDINI_HOST": "127.0.0.1",
         "HOUDINI_PORT": "9877",
         "PYTHONUTF8": "1"
       }
