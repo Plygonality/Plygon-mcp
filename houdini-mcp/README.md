@@ -65,7 +65,19 @@ Houdini needs a GUI session. Batch `hython` without a listener won't accept TCP 
 
 ### 2. Connect Cursor
 
-Open **Customize** (sidebar) → **MCPs** → **+ New MCP Server**. Paste this into `mcp.json`, **Ctrl+S**, and confirm **plygon-houdini** goes green. If Blender is already in the file, add this server next to it — don’t replace the whole file.
+Cursor does **not** use Settings → MCP. Use **Customize → MCPs**.
+
+1. Click **Customize** in the **left sidebar**.
+2. Click the **MCPs** tab.
+3. Click **+ New MCP Server**.
+4. Cursor opens `mcp.json` (`C:\Users\<you>\.cursor\mcp.json` on Windows, `~/.cursor/mcp.json` on Mac/Linux).
+5. Paste the JSON below. If `plygon-blender` is already there, add `"plygon-houdini"` next to it (comma after the previous server). Do not replace the whole file.
+6. **Ctrl+S** / **Cmd+S**.
+7. **plygon-houdini** should show **Connected**, green.
+
+**Windows:** paste [`../configs/cursor.mcp.windows.json`](../configs/cursor.mcp.windows.json) (Houdini + Blender; uses `%USERPROFILE%\\.local\\bin\\uvx.exe`). Fully quit Cursor after installing [uv](https://docs.astral.sh/uv/getting-started/installation/).
+
+**macOS / Linux:**
 
 ```json
 {
@@ -86,11 +98,7 @@ Open **Customize** (sidebar) → **MCPs** → **+ New MCP Server**. Paste this i
 }
 ```
 
-Need `uv` first? [Install uv](https://docs.astral.sh/uv/getting-started/installation/). GUI apps often miss PATH — on Windows use [`../configs/cursor.mcp.windows.json`](../configs/cursor.mcp.windows.json).
-
-**Local clone:** [`configs/cursor.mcp.json`](configs/cursor.mcp.json)  
-**Windows:** [`../configs/cursor.mcp.windows.json`](../configs/cursor.mcp.windows.json)  
-**pip install:** [`configs/cursor.mcp.pip.json`](configs/cursor.mcp.pip.json)
+**Local clone:** [`configs/cursor.mcp.json`](configs/cursor.mcp.json) · **pip:** [`configs/cursor.mcp.pip.json`](configs/cursor.mcp.pip.json)
 
 ### 3. Make something
 
