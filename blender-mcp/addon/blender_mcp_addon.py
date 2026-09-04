@@ -26,7 +26,7 @@ from bpy.props import IntProperty, BoolProperty, StringProperty
 bl_info = {
     "name": "Plygon Blender MCP",
     "author": "Plygon",
-    "version": (1, 0, 0),
+    "version": (1, 0, 1),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar > PlygonMCP",
     "description": "Local MCP bridge so Cursor agents can drive Blender via bpy",
@@ -37,6 +37,36 @@ ADDON_PROTOCOL_VERSION = 1
 DEFAULT_PORT = 9876
 
 _server = None
+
+
+def _encode_message(obj) -> bytes:
+    return (json.dumps(obj, default=str) + "\n").encode("utf-8")
+
+
+def _extract_json_objects(buffer: bytes):
+    """Split concatenated JSON values. Agents often send two commands in one packet."""
+    objects = []
+    try:
+        text = buffer.decode("utf-8")
+    except UnicodeDecodeError:
+        return objects, buffer
+    decoder = json.JSONDecoder()
+    idx = 0
+    length = len(text)
+    while idx < length:
+        while idx < length and text[idx].isspace():
+            idx += 1
+        if idx >= length:
+            return objects, b""
+        try:
+            obj, end = decoder.raw_decode(text, idx)
+        except json.JSONDecodeError:
+            break
+        if end <= idx:
+            break
+        objects.append(obj)
+        idx = end
+    return objects, text[idx:].encode("utf-8")
 
 
 class BlenderMCPServer:
@@ -154,13 +184,13 @@ class BlenderMCPServer:
 
             try:
                 response = self.execute_command(command)
-                payload = json.dumps(response)
+                payload = _encode_message(response)
             except Exception as e:
                 traceback.print_exc()
-                payload = json.dumps({"status": "error", "message": str(e)})
+                payload = _encode_message({"status": "error", "message": str(e)})
 
             try:
-                client.sendall(payload.encode("utf-8"))
+                client.sendall(payload)
             except Exception:
                 print("PlygonMCP: failed to send response (client gone)")
 
@@ -179,13 +209,12 @@ class BlenderMCPServer:
                     if not data:
                         break
                     buffer += data
-                    try:
-                        command = json.loads(buffer.decode("utf-8"))
-                        buffer = b""
+                    commands, buffer = _extract_json_objects(buffer)
+                    for command in commands:
+                        if not isinstance(command, dict):
+                            continue
                         print(f"PlygonMCP: queued {command.get('type')}")
                         self.command_queue.put((command, client))
-                    except (json.JSONDecodeError, UnicodeDecodeError):
-                        pass
                 except socket.timeout:
                     continue
                 except Exception as e:
