@@ -14,7 +14,7 @@
   <a href="blender-mcp/"><img src="https://img.shields.io/badge/telemetry-none-7dffa3?style=flat-square" alt="No telemetry"></a>
 </p>
 
-# Plygon
+# Plygon 
 
 A tech-art studio repo of **local MCP bridges** you can fork, run, and actually own.
 
