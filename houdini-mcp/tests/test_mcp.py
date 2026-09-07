@@ -15,7 +15,9 @@ def test_listener_file_exists():
         encoding="utf-8"
     )
     assert "HoudiniMCPServer" in listener
-    assert "executeInMainThreadWithResult" in listener
+    assert "addEventLoopCallback" in listener
+    assert "self.execute_command(command)" in listener
+    assert "hdefereval" not in listener
     assert "_extract_json_objects" in listener
     assert "Plygon Houdini MCP" in listener
 

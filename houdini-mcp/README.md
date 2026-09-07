@@ -151,7 +151,7 @@ Prefer structured tools for simple edits. Use `execute_houdini_code` in small st
 
 ## Protocol
 
-JSON over TCP, executed on Houdini's main thread via `hdefereval`:
+JSON over TCP, executed on Houdini's main thread via the UI event loop:
 
 ```json
 {"type": "get_scene_info", "params": {"limit": 50}}

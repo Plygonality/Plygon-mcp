@@ -21,7 +21,6 @@ from contextlib import redirect_stdout
 
 try:
     import hou
-    import hdefereval
 except ImportError:
     raise ImportError(
         "plygon_houdini_mcp.listener must run inside Houdini (hou module required)."
@@ -175,9 +174,10 @@ class HoudiniMCPServer:
                 break
 
             try:
-                response = hdefereval.executeInMainThreadWithResult(
-                    self.execute_command, (command,), {}
-                )
+                # hou.ui.addEventLoopCallback already runs this on the UI
+                # thread. Re-deferring and waiting for the main thread from
+                # here freezes Houdini (queued ping, no reply, Cursor timeout).
+                response = self.execute_command(command)
                 payload = _encode_message(response)
             except Exception as e:
                 traceback.print_exc()

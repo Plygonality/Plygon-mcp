@@ -15,7 +15,7 @@ listener.start_server(port=port)
 from plygon_houdini_mcp import listener
 listener.stop_server()
 ]]></script>
-  </tooltool>
+  </tool>
 
   <tool name="plygonmcp_status" label="MCP Status" icon="MISC_python">
     <script><![CDATA[
