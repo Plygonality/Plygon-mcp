@@ -15,7 +15,9 @@ def test_listener_file_exists():
         encoding="utf-8"
     )
     assert "HoudiniMCPServer" in listener
-    assert "executeInMainThreadWithResult" in listener
+    assert "addEventLoopCallback" in listener
+    assert "self.execute_command(command)" in listener
+    assert "hdefereval" not in listener
     assert "_extract_json_objects" in listener
     assert "Plygon Houdini MCP" in listener
 
@@ -31,6 +33,7 @@ def test_shelf_tool_exists():
     shelf = (ROOT / "package" / "toolbar" / "plygon_houdini_mcp.shelf").read_text(encoding="utf-8")
     assert "Start MCP Server" in shelf
     assert "plygon_houdini_mcp" in shelf
+    assert "</tooltool>" not in shelf
 
 
 def test_package_version():
@@ -163,6 +166,7 @@ def test_houdini_error_keeps_connection():
 
 
 def test_server_tools_registered():
+    pytest.importorskip("mcp")
     from plygon_houdini_mcp.server import mcp
 
     manager = getattr(mcp, "_tool_manager", None)

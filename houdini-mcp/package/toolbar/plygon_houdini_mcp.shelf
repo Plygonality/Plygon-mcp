@@ -3,7 +3,14 @@
   <tool name="plygonmcp_start" label="Start MCP Server" icon="MISC_python">
     <script><![CDATA[
 import os
-from plygon_houdini_mcp import listener
+try:
+    from plygon_houdini_mcp import listener
+except ImportError as exc:
+    raise ImportError(
+        "Plygon package is not on HOUDINI_PATH. Re-run "
+        "houdini-mcp/scripts/install_package.py, confirm packages/plygon_houdini_mcp.json "
+        "exists next to the plygon_houdini_mcp folder, then fully restart Houdini."
+    ) from exc
 
 port = int(os.environ.get("HOUDINI_PORT", "9877"))
 listener.start_server(port=port)
@@ -15,7 +22,7 @@ listener.start_server(port=port)
 from plygon_houdini_mcp import listener
 listener.stop_server()
 ]]></script>
-  </tooltool>
+  </tool>
 
   <tool name="plygonmcp_status" label="MCP Status" icon="MISC_python">
     <script><![CDATA[

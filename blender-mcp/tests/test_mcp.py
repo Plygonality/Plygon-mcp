@@ -16,6 +16,7 @@ def test_addon_file_exists_and_has_bl_info():
     assert "Plygon Blender MCP" in addon
     assert "_extract_json_objects" in addon
     assert "PLYGONMCP_OT_StartServer" in addon
+    assert "Cursor green is not enough" in addon
 
 
 def test_package_version():
@@ -157,6 +158,7 @@ def test_windows_mcp_config_uses_uvx_exe():
     assert "%USERPROFILE%\\.local\\bin\\uvx.exe" in blender["args"]
     assert blender["env"]["BLENDER_HOST"] == "127.0.0.1"
     assert "houdini" in cfg["mcpServers"]
+    pytest.importorskip("mcp")
     from plygon_blender_mcp.server import mcp
 
     manager = getattr(mcp, "_tool_manager", None)

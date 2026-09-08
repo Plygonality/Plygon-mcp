@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Copy the Plygon Blender MCP addon into Blender's scripts/addons folder.
 
-Usage:
-  python scripts/install_addon.py
-  python scripts/install_addon.py --addons-dir /path/to/scripts/addons
-  BLENDERMCP_ADDONS_DIR=... python scripts/install_addon.py
+This script is located via __file__, so you can run it from any working directory.
+
+  python blender-mcp/scripts/install_addon.py
+  python blender-mcp/scripts/install_addon.py --addons-dir "C:\\Users\\you\\AppData\\Roaming\\Blender Foundation\\Blender\\4.2\\scripts\\addons"
+
+uvx / Cursor MCP does not install this add-on. Green in Customize → MCPs is not enough;
+you still have to enable the add-on and click Start MCP Server (Online · port 9876).
 """
 
 from __future__ import annotations
@@ -17,29 +20,65 @@ import sys
 from pathlib import Path
 
 
-def candidate_addon_dirs() -> list[Path]:
+def unique_dirs(dirs: list[Path]) -> list[Path]:
+    seen: set[str] = set()
+    out: list[Path] = []
+    for path in dirs:
+        try:
+            key = str(path.resolve())
+        except OSError:
+            key = str(path)
+        if key not in seen:
+            seen.add(key)
+            out.append(path)
+    return out
+
+
+def blender_root_candidates() -> list[Path]:
     home = Path.home()
     system = platform.system()
-    dirs: list[Path] = []
+    roots: list[Path] = []
 
     if system == "Darwin":
-        dirs.append(home / "Library/Application Support/Blender")
+        roots.append(home / "Library/Application Support/Blender")
     elif system == "Windows":
         appdata = os.environ.get("APPDATA", "")
+        local = os.environ.get("LOCALAPPDATA", "")
         if appdata:
-            dirs.append(Path(appdata) / "Blender Foundation" / "Blender")
+            roots.append(Path(appdata) / "Blender Foundation" / "Blender")
+        if local:
+            roots.append(Path(local) / "Blender Foundation" / "Blender")
     else:
-        dirs.append(home / ".config" / "blender")
+        roots.append(home / ".config" / "blender")
 
+    return roots
+
+
+def candidate_addon_dirs() -> list[Path]:
     found: list[Path] = []
-    for root in dirs:
+    for root in blender_root_candidates():
         if not root.exists():
             continue
-        for version_dir in sorted(root.iterdir(), reverse=True):
+        try:
+            versions = list(root.iterdir())
+        except OSError:
+            continue
+        for version_dir in sorted(versions, reverse=True):
             addons = version_dir / "scripts" / "addons"
             if addons.is_dir():
                 found.append(addons)
-    return found
+    return unique_dirs(found)
+
+
+def install_addon(target_root: Path, addon_src: Path) -> Path:
+    target_root.mkdir(parents=True, exist_ok=True)
+    dest = target_root / "blender_mcp_addon.py"
+    if dest.exists():
+        bak = dest.with_suffix(".py.bak")
+        shutil.copy2(dest, bak)
+        print(f"Backed up existing addon → {bak}")
+    shutil.copy2(addon_src, dest)
+    return dest
 
 
 def main() -> int:
@@ -71,32 +110,37 @@ def main() -> int:
     addon_src = Path(__file__).resolve().parents[1] / "addon" / "blender_mcp_addon.py"
     if not addon_src.is_file():
         print(f"Addon source not found: {addon_src}", file=sys.stderr)
+        print(
+            "Run this from a Plygon-mcp checkout (the folder that contains blender-mcp/).",
+            file=sys.stderr,
+        )
         return 1
 
-    target_root = Path(args.addons_dir) if args.addons_dir else (Path(env_dir) if env_dir else None)
-    if target_root is None:
-        if not detected:
-            print(
-                "Could not find a Blender addons folder. Pass --addons-dir, or install "
-                "manually: Blender → Edit → Preferences → Add-ons → Install…",
-                file=sys.stderr,
-            )
-            return 1
-        target_root = detected[0]
-        print(f"Using detected addons dir: {target_root}")
+    if args.addons_dir is not None:
+        targets = [Path(args.addons_dir)]
+    elif env_dir:
+        targets = [Path(env_dir)]
+    elif not detected:
+        print(
+            "Could not find a Blender addons folder. Pass --addons-dir, or install "
+            "manually: Blender → Edit → Preferences → Add-ons → Install from Disk… "
+            "→ blender-mcp/addon/blender_mcp_addon.py",
+            file=sys.stderr,
+        )
+        return 1
+    else:
+        targets = detected
 
-    target_root.mkdir(parents=True, exist_ok=True)
-    dest = target_root / "blender_mcp_addon.py"
-    if dest.exists():
-        bak = dest.with_suffix(".py.bak")
-        shutil.copy2(dest, bak)
-        print(f"Backed up existing addon → {bak}")
+    for target_root in unique_dirs(targets):
+        dest = install_addon(target_root, addon_src)
+        print(f"Installed addon → {dest}")
 
-    shutil.copy2(addon_src, dest)
-    print(f"Installed addon → {dest}")
     print(
-        "Next: open Blender → Preferences → Add-ons → enable "
-        "'Interface: Plygon Blender MCP' → N-panel → PlygonMCP → Start MCP Server."
+        "Next: open Blender (GUI, not blender -b) → Preferences → Add-ons → enable "
+        "'Interface: Plygon Blender MCP' → 3D Viewport N-panel → PlygonMCP → "
+        "Start MCP Server. Confirm Online · port 9876. Leave Blender open.\n"
+        "A green row in Customize → MCPs only means Cursor spawned uvx; ping from a "
+        "local Agent chat, not a Cloud Agent."
     )
     return 0
 
