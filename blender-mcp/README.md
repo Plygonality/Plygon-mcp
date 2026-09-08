@@ -27,8 +27,10 @@ Local, no-telemetry fork of [ahujasid/blender-mcp](https://github.com/ahujasid/b
 Fork it from GitHub. Run it on localhost. Own the code.
 
 ```
-Cursor agent  ──stdio MCP──►  plygon-blender-mcp  ──TCP :9876──►  Blender add-on  ──bpy──►  your .blend
+Cursor agent  ──stdio MCP──►  plygon-blender-mcp  ──TCP 127.0.0.1:9876──►  Blender add-on  ──bpy──►  your .blend
 ```
+
+A green row in **Customize → MCPs** only means Cursor spawned `uvx`. The N-panel must say **Online · port 9876**. Ping from a **local Agent** chat — a Cloud Agent cannot reach Blender on your PC. `uvx` does not install this add-on.
 
 ---
 
@@ -38,7 +40,7 @@ Most “AI for Blender” stacks want your scene in the cloud, or they dump 300 
 
 Plygon is the opposite:
 
-- **Local.** The MCP and Blender talk on `localhost:9876`. That’s it.
+- **Local.** The MCP and Blender talk on `127.0.0.1:9876`. That’s it.
 - **No telemetry.** Prompts, screenshots, and meshes stay with you.
 - **Small enough to fork.** One add-on. One Python server. Read it in an afternoon, then make it yours.
 - **Built for Cursor agents.** Structured tools for the boring bits, `execute_blender_code` for the rest, viewport capture so the model can *see*.
@@ -57,7 +59,7 @@ Or hit **Fork** — this repo is MIT on purpose.
 ### 1. Drop the add-on into Blender
 
 1. Open **Blender** (the GUI app — not `blender -b`).
-2. Run this from the repo root:
+2. Run this from the repo (any cwd is fine if you use the full path), or [`scripts/install-blender.ps1`](../scripts/install-blender.ps1) on Windows:
 
 ```bash
 python blender-mcp/scripts/install_addon.py
@@ -165,7 +167,7 @@ Optional one-click: [Add to Cursor](https://cursor.com/link/mcp/install?name=ply
 ### 3. Make something
 
 1. Blender must still show **Online · port 9876**.
-2. Open a new Cursor **Agent** chat (not Ask).
+2. Open a new Cursor **Agent** chat on the desktop (not Ask, not Cloud Agent).
 3. Paste: `Ping Blender. Do not call any other tools.` Approve the tool if asked.
 4. Then:
 
@@ -199,6 +201,7 @@ Prefer the structured tools for simple edits. Use `execute_blender_code` in smal
 | [`src/plygon_blender_mcp/`](src/plygon_blender_mcp/) | MCP server Cursor launches |
 | [`configs/`](configs/) | Cursor MCP JSON (GitHub / local / Windows / pip) |
 | [`scripts/install_addon.py`](scripts/install_addon.py) | Copies the add-on into Blender |
+| [`../scripts/install-blender.ps1`](../scripts/install-blender.ps1) | Windows installer (any cwd) |
 | [`examples/prompts.md`](examples/prompts.md) | Prompts that make the demo hit |
 
 ---
@@ -250,12 +253,13 @@ uv run python scripts/smoke_test.py --live   # Blender must be listening
 |---------|-----|
 | `spawn uvx ENOENT` / `'uvx' is not recognized` | Install [uv](https://docs.astral.sh/uv/getting-started/installation/), use `%USERPROFILE%\\.local\\bin\\uvx.exe` on Windows, fully quit Cursor (tray icon too) |
 | MCP list empties after Ctrl+S | `mcp.json` is invalid JSON. Don’t paste `{ ...leave existing... }` placeholders. Add `plygon-blender` next to `houdini` |
-| `Extra data: line 1 column 51` | Reinstall add-on 1.0.1+ and restart the MCP server (concatenated JSON from parallel tools) |
-| `Could not connect to Blender` | Add-on enabled? **Start MCP Server**? Port = `BLENDER_PORT`? |
-| Timeouts | Keep Blender in the foreground; smaller code chunks |
-| Add-on missing | Restart Blender; search Preferences for “Plygon” |
+| `Extra data: line 1 column 51` | Reinstall add-on 1.0.2+ and restart the MCP server (concatenated JSON from parallel tools) |
+| Green MCP, `Could not connect` | Add-on enabled? **Start MCP Server**? Panel says **Online · 9876**? Green is not enough |
+| Timeouts | Keep Blender in the foreground; smaller code chunks. Do not ping from a Cloud Agent |
+| Add-on missing | Restart Blender; search Preferences for “Plygon”; or run `scripts/install-blender.ps1` |
 | Black screenshots | Keep a 3D Viewport visible |
 | Stale server after a git update | `uv cache clean` then fully quit Cursor |
+| User + project MCP both enabled | Two clients on 9876. Disable one |
 
 ---
 

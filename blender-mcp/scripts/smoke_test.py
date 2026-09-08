@@ -61,7 +61,7 @@ def test_live_ping(host: str, port: int) -> None:
     if not conn.connect():
         raise SystemExit(
             f"FAIL: could not connect to {host}:{port}. "
-            "Start the addon in Blender first."
+            "Start the addon in Blender (N-panel → PlygonMCP → Start MCP Server)."
         )
     result = conn.send_command("ping")
     print("OK live ping:", json.dumps(result))
@@ -90,7 +90,7 @@ def main() -> int:
 
     if args.live:
         if not port_open(args.host, args.port):
-            print(f"FAIL: nothing listening on {args.host}:{args.port}")
+            print(f"FAIL: nothing listening on {args.host}:{args.port} (connection refused). Start the Blender add-on server.")
             return 1
         test_live_ping(args.host, args.port)
     else:

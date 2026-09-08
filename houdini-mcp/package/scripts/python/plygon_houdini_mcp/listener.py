@@ -84,7 +84,10 @@ class HoudiniMCPServer:
             print("PlygonMCP: Houdini 19.5+ recommended")
 
         if self.running:
-            print("PlygonMCP: server already running")
+            print(f"PlygonMCP: server already running on {self.host}:{self.port}")
+            if not _event_loop_callback_registered:
+                hou.ui.addEventLoopCallback(self._drain_command_queue)
+                _event_loop_callback_registered = True
             return
 
         self.running = True
@@ -140,6 +143,10 @@ class HoudiniMCPServer:
         if self.server_thread and self.server_thread.is_alive():
             self.server_thread.join(timeout=1.0)
         self.server_thread = None
+        try:
+            hou.ui.removeEventLoopCallback(self._drain_command_queue)
+        except Exception:
+            pass
         _event_loop_callback_registered = False
         print("PlygonMCP: server stopped")
 
@@ -185,6 +192,7 @@ class HoudiniMCPServer:
 
             try:
                 client.sendall(payload)
+                print(f"PlygonMCP: replied {command.get('type')}")
             except Exception:
                 print("PlygonMCP: failed to send response (client gone)")
 
@@ -574,7 +582,7 @@ def start_server(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
     """Start the MCP listener (called from shelf tool or Python Shell)."""
     global _server
     if _server and _server.running:
-        print("PlygonMCP: server already running")
+        print(f"PlygonMCP: server already running on {_server.host}:{_server.port}")
         return _server
     _server = HoudiniMCPServer(host=host, port=port)
     _server.start()
@@ -593,4 +601,9 @@ def stop_server():
 
 def server_status():
     """Return whether the listener is running."""
-    return {"running": bool(_server and _server.running), "port": DEFAULT_PORT if _server else None}
+    running = bool(_server and _server.running)
+    return {
+        "running": running,
+        "host": _server.host if _server else None,
+        "port": _server.port if _server else None,
+    }

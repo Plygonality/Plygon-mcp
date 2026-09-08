@@ -15,6 +15,25 @@ logger = logging.getLogger("PlygonHoudiniMCP")
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 9877
 
+REFUSED_MESSAGE = (
+    "Could not connect to Houdini on {host}:{port} (connection refused). "
+    "Cursor already spawned the MCP process — the in-Houdini listener is not running. "
+    "Open Houdini (GUI, not hython), then in Windows → Python Shell run: "
+    "from plygon_houdini_mcp import listener; listener.start_server(port={port}). "
+    "You should see: PlygonMCP: listening on 127.0.0.1:{port}. "
+    "A green row in Customize → MCPs is not enough. "
+    "Plygon uses port 9877; another MCP on 8100 is not this bridge. "
+    "Ping from a local Agent chat, not a Cloud Agent."
+)
+
+TIMEOUT_MESSAGE = (
+    "Timeout waiting for Houdini after connecting to {host}:{port}. "
+    "The listener accepted the socket but did not reply. "
+    "If Houdini shows 'not responding', force-quit it (Task Manager), "
+    "reinstall houdini-mcp/scripts/install_package.py, restart, and start the listener again. "
+    "Keep the Houdini window in the foreground. Do not ping from a Cloud Agent."
+)
+
 _state_lock = threading.Lock()
 
 
@@ -87,6 +106,14 @@ class HoudiniConnection:
             self._recv_buf = b""
             logger.info("Connected to Houdini at %s:%s", host, self.port)
             return True
+        except ConnectionRefusedError as e:
+            logger.error("Houdini refused the connection at %s:%s: %s", self.host, self.port, e)
+            self._reset_socket()
+            return False
+        except (TimeoutError, socket.timeout) as e:
+            logger.error("Timed out connecting to Houdini at %s:%s: %s", self.host, self.port, e)
+            self._reset_socket()
+            return False
         except Exception as e:
             logger.error("Failed to connect to Houdini: %s", e)
             self._reset_socket()
@@ -136,8 +163,7 @@ class HoudiniConnection:
     ) -> Dict[str, Any]:
         if not self.sock and not self.connect():
             raise ConnectionError(
-                "Not connected to Houdini. Open Houdini, install the Plygon MCP package, "
-                "and click Start MCP Server on the shelf."
+                REFUSED_MESSAGE.format(host=resolve_loopback_host(self.host), port=self.port)
             )
 
         command = {"type": command_type, "params": params or {}}
@@ -153,8 +179,7 @@ class HoudiniConnection:
         except socket.timeout as e:
             self._reset_socket()
             raise TimeoutError(
-                "Timeout waiting for Houdini. Simplify the request, or ensure Houdini "
-                "is running with a GUI (not hython -c batch mode)."
+                TIMEOUT_MESSAGE.format(host=resolve_loopback_host(self.host), port=self.port)
             ) from e
         except (ConnectionError, BrokenPipeError, ConnectionResetError) as e:
             self._reset_socket()
@@ -180,11 +205,10 @@ def get_houdini_connection() -> HoudiniConnection:
         port = int(os.getenv("HOUDINI_PORT", str(DEFAULT_PORT)))
         _houdini_connection = HoudiniConnection(host=host, port=port)
         if not _houdini_connection.connect():
+            host = resolve_loopback_host(_houdini_connection.host)
+            port = _houdini_connection.port
             _houdini_connection = None
-            raise ConnectionError(
-                "Could not connect to Houdini. Make sure the Plygon Houdini MCP listener "
-                "is running (shelf tool: Start MCP Server)."
-            )
+            raise ConnectionError(REFUSED_MESSAGE.format(host=host, port=port))
         return _houdini_connection
 
 

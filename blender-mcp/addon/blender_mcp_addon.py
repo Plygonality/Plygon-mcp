@@ -27,7 +27,7 @@ from bpy.props import IntProperty, BoolProperty, StringProperty
 bl_info = {
     "name": "Plygon Blender MCP",
     "author": "Plygon",
-    "version": (1, 0, 1),
+    "version": (1, 0, 2),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar > PlygonMCP",
     "description": "Local MCP bridge so Cursor agents can drive Blender via bpy",
@@ -705,9 +705,9 @@ class PLYGONMCP_PT_Panel(bpy.types.Panel):
         box = layout.box()
         box.label(text="Setup")
         col = box.column(align=True)
-        col.label(text="1. Start server here")
-        col.label(text="2. Enable MCP in Cursor")
-        col.label(text="3. Ask the agent to build")
+        col.label(text="1. This panel must say Online")
+        col.label(text="2. Cursor green is not enough")
+        col.label(text="3. Ping from a local Agent chat")
 
 
 classes = (

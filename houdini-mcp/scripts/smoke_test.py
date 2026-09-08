@@ -61,7 +61,8 @@ def test_live_ping(host: str, port: int) -> None:
     if not conn.connect():
         raise SystemExit(
             f"FAIL: could not connect to {host}:{port}. "
-            "Start the listener in Houdini first."
+            "Start the listener in Houdini first "
+            "(Python Shell: from plygon_houdini_mcp import listener; listener.start_server(port=9877))."
         )
     result = conn.send_command("ping")
     print("OK live ping:", json.dumps(result))
@@ -90,7 +91,7 @@ def main() -> int:
 
     if args.live:
         if not port_open(args.host, args.port):
-            print(f"FAIL: nothing listening on {args.host}:{args.port}")
+            print(f"FAIL: nothing listening on {args.host}:{args.port} (connection refused). Start the Houdini listener.")
             return 1
         test_live_ping(args.host, args.port)
     else:

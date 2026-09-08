@@ -1,6 +1,6 @@
 # Prompts that make Plygon MCP look good
 
-Copy these into Cursor once Blender is listening.
+Copy these into a **local** Cursor Agent chat once Blender’s N-panel says **Online · port 9876**. A green MCP row is not enough. Cloud Agent chats cannot reach Blender on your PC.
 
 ## Instant demo
 

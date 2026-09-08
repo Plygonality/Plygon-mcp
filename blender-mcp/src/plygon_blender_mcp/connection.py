@@ -15,6 +15,21 @@ logger = logging.getLogger("PlygonBlenderMCP")
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 9876
 
+REFUSED_MESSAGE = (
+    "Could not connect to Blender on {host}:{port} (connection refused). "
+    "Cursor already spawned the MCP process — the add-on listener is not running. "
+    "Open Blender (GUI, not blender -b), enable Interface: Plygon Blender MCP, "
+    "press N in the 3D Viewport, open the PlygonMCP tab, click Start MCP Server, "
+    "and confirm Online · port {port}. A green row in Customize → MCPs is not enough. "
+    "Ping from a local Agent chat, not a Cloud Agent."
+)
+
+TIMEOUT_MESSAGE = (
+    "Timeout waiting for Blender after connecting to {host}:{port}. "
+    "Keep Blender in the foreground with a 3D Viewport visible. "
+    "Do not ping from a Cloud Agent. If Blender is frozen, force-quit and restart the add-on server."
+)
+
 _state_lock = threading.Lock()
 
 
@@ -87,6 +102,14 @@ class BlenderConnection:
             self._recv_buf = b""
             logger.info("Connected to Blender at %s:%s", host, self.port)
             return True
+        except ConnectionRefusedError as e:
+            logger.error("Blender refused the connection at %s:%s: %s", self.host, self.port, e)
+            self._reset_socket()
+            return False
+        except (TimeoutError, socket.timeout) as e:
+            logger.error("Timed out connecting to Blender at %s:%s: %s", self.host, self.port, e)
+            self._reset_socket()
+            return False
         except Exception as e:
             logger.error("Failed to connect to Blender: %s", e)
             self._reset_socket()
@@ -136,8 +159,7 @@ class BlenderConnection:
     ) -> Dict[str, Any]:
         if not self.sock and not self.connect():
             raise ConnectionError(
-                "Not connected to Blender. Open Blender, enable the Plygon MCP addon, "
-                "and click Start MCP Server in the N-panel (PlygonMCP tab)."
+                REFUSED_MESSAGE.format(host=resolve_loopback_host(self.host), port=self.port)
             )
 
         command = {"type": command_type, "params": params or {}}
@@ -153,8 +175,7 @@ class BlenderConnection:
         except socket.timeout as e:
             self._reset_socket()
             raise TimeoutError(
-                "Timeout waiting for Blender. Simplify the request, or ensure Blender "
-                "is running with a GUI (not blender -b)."
+                TIMEOUT_MESSAGE.format(host=resolve_loopback_host(self.host), port=self.port)
             ) from e
         except (ConnectionError, BrokenPipeError, ConnectionResetError) as e:
             self._reset_socket()
@@ -180,11 +201,10 @@ def get_blender_connection() -> BlenderConnection:
         port = int(os.getenv("BLENDER_PORT", str(DEFAULT_PORT)))
         _blender_connection = BlenderConnection(host=host, port=port)
         if not _blender_connection.connect():
+            host = resolve_loopback_host(_blender_connection.host)
+            port = _blender_connection.port
             _blender_connection = None
-            raise ConnectionError(
-                "Could not connect to Blender. Make sure the Plygon Blender MCP addon "
-                "is enabled and Start MCP Server has been clicked."
-            )
+            raise ConnectionError(REFUSED_MESSAGE.format(host=host, port=port))
         return _blender_connection
 
 

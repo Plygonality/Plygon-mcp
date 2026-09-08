@@ -1,10 +1,14 @@
 # Prompts for Plygon Houdini MCP
 
-Copy these into Cursor after the MCP is connected and the Houdini listener is running.
+Copy these into a **local** Cursor Agent chat after the MCP is green **and** Houdini prints `PlygonMCP: listening on 127.0.0.1:9877`. Cloud Agent chats cannot reach your DCC.
 
 ---
 
 ## Quick smoke test
+
+> Ping Houdini with ping_houdini, then call get_scene_info. Do not change the hip.
+
+If that returns JSON, follow with:
 
 > Ping Houdini, show me the current scene info, then create a red-ish box primitive and screenshot the viewport.
 
@@ -60,4 +64,4 @@ Copy these into Cursor after the MCP is connected and the Houdini listener is ru
 
 ## Troubleshooting prompt
 
-> ping_houdini failed — walk me through checking shelf server, port 9877, and Cursor MCP config without changing my hip yet.
+> ping_houdini failed. Classify spawn vs connection-refused vs timeout. Check: Python Shell `from plygon_houdini_mcp import listener` then `listener.start_server(port=9877)`, port 9877 (not 8100), packages/plygon_houdini_mcp.json exists, local Agent not Cloud, Houdini not frozen. Do not change my hip.
