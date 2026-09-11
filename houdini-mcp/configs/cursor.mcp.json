@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "plygon-houdini": {
-      "command": "uv",
+      "command": "${userHome}/.local/bin/uv",
       "args": [
         "run",
         "--directory",

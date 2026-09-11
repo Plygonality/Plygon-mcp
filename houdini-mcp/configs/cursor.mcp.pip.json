@@ -1,7 +1,11 @@
 {
   "mcpServers": {
     "plygon-houdini": {
-      "command": "plygon-houdini-mcp",
+      "command": "REPLACE_WITH_ABSOLUTE_PATH_TO_EDITABLE_VENV_PYTHON",
+      "args": [
+        "-m",
+        "plygon_houdini_mcp.server"
+      ],
       "env": {
         "HOUDINI_HOST": "127.0.0.1",
         "HOUDINI_PORT": "9877"

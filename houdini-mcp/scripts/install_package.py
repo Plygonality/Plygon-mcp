@@ -4,9 +4,9 @@
 This script is located via __file__, so you can run it from any working
 directory:
 
-  python houdini-mcp/scripts/install_package.py
-  python C:\\Users\\you\\Documents\\Plygon-mcp\\houdini-mcp\\scripts\\install_package.py
-  python scripts/install_package.py --pref-dir "C:\\Users\\you\\Documents\\houdini21.0"
+  uv run python houdini-mcp/scripts/install_package.py
+  uv run python C:\\Users\\you\\Documents\\Plygon-mcp\\houdini-mcp\\scripts\\install_package.py
+  uv run python scripts/install_package.py --pref-dir "C:\\Users\\you\\Documents\\houdini21.0"
 
 On Windows, Houdini stores prefs in Documents\\houdini21.0 (not Documents\\houdini\\21.0).
 Dutch / OneDrive machines often use OneDrive\\Documenten\\houdini21.0 instead.
@@ -28,6 +28,7 @@ from pathlib import Path
 PACKAGE_DIR_NAME = "plygon_houdini_mcp"
 WRAPPER_JSON_NAME = "plygon_houdini_mcp.json"
 HOUDINI_PREF_NAME = re.compile(r"^houdini\d", re.IGNORECASE)
+HOUDINI_NUMERIC_PREF_NAME = re.compile(r"^\d+(?:\.\d+)+$")
 
 # Houdini only scans packages/*.json (not nested JSON). This wrapper points
 # HOUDINI_PATH at the copied package so `from plygon_houdini_mcp import listener` works.
@@ -58,7 +59,7 @@ def unique_dirs(dirs: list[Path]) -> list[Path]:
     return out
 
 
-def _scan_parent_for_prefs(parent: Path) -> list[Path]:
+def _scan_parent_for_prefs(parent: Path, *, allow_numeric: bool = False) -> list[Path]:
     """Find houdini21.0-style folders, plus a houdini/20.5 container if present."""
     found: list[Path] = []
     if not parent.is_dir():
@@ -68,7 +69,11 @@ def _scan_parent_for_prefs(parent: Path) -> list[Path]:
     except OSError:
         return found
     for child in children:
-        if is_houdini_pref_dir(child):
+        if is_houdini_pref_dir(child) or (
+            allow_numeric
+            and child.is_dir()
+            and HOUDINI_NUMERIC_PREF_NAME.match(child.name)
+        ):
             found.append(child)
     container = parent / "houdini"
     if container.is_dir():
@@ -79,7 +84,7 @@ def _scan_parent_for_prefs(parent: Path) -> list[Path]:
         for child in nested:
             if not child.is_dir():
                 continue
-            if is_houdini_pref_dir(child) or child.name[0].isdigit():
+            if is_houdini_pref_dir(child) or HOUDINI_NUMERIC_PREF_NAME.match(child.name):
                 found.append(child)
     return found
 
@@ -114,7 +119,14 @@ def candidate_pref_dirs() -> list[Path]:
     home = Path.home()
 
     if system == "Darwin":
-        dirs.extend(_scan_parent_for_prefs(home / "Library" / "Preferences" / "houdini"))
+        dirs.extend(
+            _scan_parent_for_prefs(
+                home / "Library" / "Preferences" / "houdini",
+                allow_numeric=True,
+            )
+        )
+        # Some Houdini/macOS configurations still use ~/houdini21.0.
+        dirs.extend(_scan_parent_for_prefs(home))
     elif system == "Windows":
         for root in _windows_document_roots():
             dirs.extend(_scan_parent_for_prefs(root))
@@ -154,10 +166,12 @@ def _missing_pref_help() -> str:
         "Could not find a Houdini preferences folder (houdini21.0, houdini20.5, …).\n"
         "Open Houdini once so it creates that folder, then rerun — or pass --pref-dir.\n\n"
         "Windows examples:\n"
-        '  python houdini-mcp/scripts/install_package.py --pref-dir "%USERPROFILE%\\Documents\\houdini21.0"\n'
-        '  python houdini-mcp/scripts/install_package.py --pref-dir "%USERPROFILE%\\OneDrive\\Documenten\\houdini21.0"\n\n'
-        "macOS / Linux example:\n"
-        "  python houdini-mcp/scripts/install_package.py --pref-dir ~/houdini21.0"
+        '  uv run python houdini-mcp/scripts/install_package.py --pref-dir "%USERPROFILE%\\Documents\\houdini21.0"\n'
+        '  uv run python houdini-mcp/scripts/install_package.py --pref-dir "%USERPROFILE%\\OneDrive\\Documenten\\houdini21.0"\n\n'
+        "macOS example:\n"
+        "  uv run python houdini-mcp/scripts/install_package.py --pref-dir ~/Library/Preferences/houdini/21.0\n"
+        "Linux example:\n"
+        "  uv run python houdini-mcp/scripts/install_package.py --pref-dir ~/houdini21.0"
     )
 
 
