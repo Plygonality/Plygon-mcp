@@ -10,6 +10,7 @@ from __future__ import annotations
 import inspect
 import io
 import json
+import math
 import os
 import queue
 import socket
@@ -17,7 +18,10 @@ import tempfile
 import threading
 import time
 import traceback
+import uuid
 from contextlib import redirect_stdout
+
+from . import __version__
 
 try:
     import hou
@@ -29,9 +33,13 @@ except ImportError:
 ADDON_PROTOCOL_VERSION = 1
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 9877
+MAX_BUFFER_BYTES = 4 * 1024 * 1024
+MAX_PENDING_COMMANDS = 128
+MAX_COMMANDS_PER_TICK = 1
 
 _server = None
 _event_loop_callback_registered = False
+_MALFORMED_JSON = object()
 
 
 def _encode_message(obj) -> bytes:
@@ -56,7 +64,14 @@ def _extract_json_objects(buffer: bytes):
         try:
             obj, end = decoder.raw_decode(text, idx)
         except json.JSONDecodeError:
-            break
+            # Messages are newline terminated. Recover after a malformed
+            # frame instead of letting it block every later request.
+            newline = text.find("\n", idx)
+            if newline < 0:
+                break
+            objects.append(_MALFORMED_JSON)
+            idx = newline + 1
+            continue
         if end <= idx:
             break
         objects.append(obj)
@@ -73,12 +88,19 @@ class HoudiniMCPServer:
         self.running = False
         self.socket = None
         self.server_thread = None
-        self.command_queue: queue.Queue = queue.Queue()
+        self.command_queue: queue.Queue = queue.Queue(maxsize=MAX_PENDING_COMMANDS)
         self._clients = set()
         self._clients_lock = threading.Lock()
 
-    def start(self):
+    def start(self) -> bool:
         global _event_loop_callback_registered
+
+        if not hou.isUIAvailable():
+            print(
+                "PlygonMCP: cannot start without the Houdini UI. "
+                "Open the normal Houdini GUI, not hython or a batch session."
+            )
+            return False
 
         if hou.applicationVersion()[0] < 19:
             print("PlygonMCP: Houdini 19.5+ recommended")
@@ -88,14 +110,14 @@ class HoudiniMCPServer:
             if not _event_loop_callback_registered:
                 hou.ui.addEventLoopCallback(self._drain_command_queue)
                 _event_loop_callback_registered = True
-            return
+            return True
 
-        self.running = True
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.socket.bind((self.host, self.port))
             self.socket.listen(5)
+            self.running = True
 
             self.server_thread = threading.Thread(target=self._server_loop, daemon=True)
             self.server_thread.start()
@@ -105,9 +127,11 @@ class HoudiniMCPServer:
                 _event_loop_callback_registered = True
 
             print(f"PlygonMCP: listening on {self.host}:{self.port}")
+            return True
         except Exception as e:
             print(f"PlygonMCP: failed to start: {e}")
             self.stop()
+            return False
 
     def stop(self):
         global _event_loop_callback_registered
@@ -174,17 +198,24 @@ class HoudiniMCPServer:
         if not self.running:
             return False
 
-        while True:
+        processed = 0
+        while processed < MAX_COMMANDS_PER_TICK:
             try:
-                command, client = self.command_queue.get_nowait()
+                command, client, client_closed, protocol_error = self.command_queue.get_nowait()
             except queue.Empty:
                 break
 
+            if client_closed.is_set():
+                continue
+
             try:
-                # hou.ui.addEventLoopCallback already runs this on the UI
-                # thread. Re-deferring and waiting for the main thread from
-                # here freezes Houdini (queued ping, no reply, Cursor timeout).
-                response = self.execute_command(command)
+                if protocol_error:
+                    response = {"status": "error", "message": protocol_error}
+                else:
+                    # hou.ui.addEventLoopCallback already runs this on the UI
+                    # thread. Re-deferring and waiting for the main thread from
+                    # here freezes Houdini (queued ping, no reply, Cursor timeout).
+                    response = self.execute_command(command)
                 payload = _encode_message(response)
             except Exception as e:
                 traceback.print_exc()
@@ -192,9 +223,11 @@ class HoudiniMCPServer:
 
             try:
                 client.sendall(payload)
-                print(f"PlygonMCP: replied {command.get('type')}")
+                command_name = command.get("type") if isinstance(command, dict) else "protocol_error"
+                print(f"PlygonMCP: replied {command_name}")
             except Exception:
                 print("PlygonMCP: failed to send response (client gone)")
+            processed += 1
 
         return True
 
@@ -203,6 +236,7 @@ class HoudiniMCPServer:
         with self._clients_lock:
             self._clients.add(client)
         buffer = b""
+        client_closed = threading.Event()
 
         try:
             while self.running:
@@ -211,18 +245,47 @@ class HoudiniMCPServer:
                     if not data:
                         break
                     buffer += data
+                    if len(buffer) > MAX_BUFFER_BYTES:
+                        print(
+                            f"PlygonMCP: closing client with more than "
+                            f"{MAX_BUFFER_BYTES} buffered bytes"
+                        )
+                        break
                     commands, buffer = _extract_json_objects(buffer)
                     for command in commands:
-                        if not isinstance(command, dict):
-                            continue
-                        print(f"PlygonMCP: queued {command.get('type')}")
-                        self.command_queue.put((command, client))
+                        if command is _MALFORMED_JSON:
+                            item = (
+                                None,
+                                client,
+                                client_closed,
+                                "Malformed newline-delimited JSON command",
+                            )
+                        elif not isinstance(command, dict):
+                            item = (
+                                None,
+                                client,
+                                client_closed,
+                                "Command must be a JSON object",
+                            )
+                        else:
+                            print(f"PlygonMCP: queued {command.get('type')}")
+                            item = (command, client, client_closed, None)
+                        try:
+                            self.command_queue.put_nowait(item)
+                        except queue.Full:
+                            print(
+                                f"PlygonMCP: closing client because {MAX_PENDING_COMMANDS} "
+                                "commands are already pending"
+                            )
+                            client_closed.set()
+                            return
                 except socket.timeout:
                     continue
                 except Exception as e:
                     print(f"PlygonMCP: recv error: {e}")
                     break
         finally:
+            client_closed.set()
             with self._clients_lock:
                 self._clients.discard(client)
             try:
@@ -287,7 +350,7 @@ class HoudiniMCPServer:
     def get_addon_info(self):
         return {
             "name": "Plygon Houdini MCP",
-            "addon_version": [1, 0, 0],
+            "addon_version": [int(part) for part in __version__.split(".")],
             "protocol_version": ADDON_PROTOCOL_VERSION,
             "houdini_version": hou.applicationVersionString(),
             "hip_file": hou.hipFile.path() or "(unsaved)",
@@ -367,7 +430,7 @@ class HoudiniMCPServer:
                         "path": child.path(),
                         "name": child.name(),
                         "type": child.type().name(),
-                        "inputs": [i.path() for i in child.inputs()],
+                        "inputs": [i.path() if i else None for i in child.inputs()],
                     }
                 )
                 if recursive:
@@ -381,8 +444,9 @@ class HoudiniMCPServer:
         if not node:
             raise ValueError(f"Node not found: {node_path}")
 
+        all_parms = node.parms()
         parms = []
-        for parm in node.parms():
+        for parm in all_parms[:100]:
             try:
                 val = parm.eval()
                 if hasattr(val, "__iter__") and not isinstance(val, (str, bytes)):
@@ -401,8 +465,8 @@ class HoudiniMCPServer:
             "outputs": [out.path() for out in node.outputs()],
             "display": node.isDisplayFlagSet() if hasattr(node, "isDisplayFlagSet") else None,
             "render": node.isRenderFlagSet() if hasattr(node, "isRenderFlagSet") else None,
-            "parms": parms[:100],
-            "parm_count": len(node.parms()),
+            "parms": parms,
+            "parm_count": len(all_parms),
             "children": [c.path() for c in node.children()],
         }
 
@@ -413,7 +477,7 @@ class HoudiniMCPServer:
                     info["geometry"] = {
                         "points": len(geo.points()),
                         "prims": len(geo.prims()),
-                        "vertices": len(geo.iterVertices()) if hasattr(geo, "iterVertices") else None,
+                        "vertices": sum(prim.numVertices() for prim in geo.prims()),
                     }
             except hou.GeometryPermissionError:
                 info["geometry"] = {"error": "Geometry not accessible (may need cook)"}
@@ -441,10 +505,18 @@ class HoudiniMCPServer:
         if not node:
             raise ValueError(f"Node not found: {node_path}")
         parm = node.parm(parm_name)
-        if not parm:
-            raise ValueError(f"Parameter not found: {parm_name} on {node_path}")
-        parm.set(value)
-        return {"node": node_path, "parm": parm_name, "value": parm.eval()}
+        if parm:
+            parm.set(value)
+            result = parm.eval()
+        else:
+            parm_tuple = node.parmTuple(parm_name)
+            if not parm_tuple:
+                raise ValueError(f"Parameter not found: {parm_name} on {node_path}")
+            if not isinstance(value, (list, tuple)):
+                raise ValueError(f"Tuple parameter {parm_name} requires a list of values")
+            parm_tuple.set(value)
+            result = list(parm_tuple.eval())
+        return {"node": node_path, "parm": parm_name, "value": result}
 
     def connect_nodes(self, output_node_path: str, input_node_path: str, input_index: int = 0):
         out_node = hou.node(output_node_path)
@@ -486,9 +558,13 @@ class HoudiniMCPServer:
         return {"executed": True, "result": result}
 
     def get_viewport_screenshot(self, max_size: int = 1000, filepath: str = ""):
+        max_size = int(max_size)
+        if max_size < 2:
+            raise ValueError("max_size must be at least 2 pixels")
         if not filepath:
             filepath = os.path.join(
-                tempfile.gettempdir(), f"plygon_mcp_viewport_{os.getpid()}.png"
+                tempfile.gettempdir(),
+                f"plygon_mcp_viewport_{os.getpid()}_{uuid.uuid4().hex}.png",
             )
 
         desktop = hou.ui.curDesktop()
@@ -497,18 +573,27 @@ class HoudiniMCPServer:
             return {"error": "No Scene Viewer pane found. Open a Scene Viewer in Houdini."}
 
         viewport = scene_viewer.curViewport()
-        settings = viewport.settings()
-
-        src_w = settings.screenWidth()
-        src_h = settings.screenHeight()
+        src_w, src_h = viewport.resolutionInPixels()
+        if src_w < 2 or src_h < 2:
+            raise ValueError("The Scene Viewer has no drawable pixel area")
         if max(src_w, src_h) > max_size:
             scale = max_size / max(src_w, src_h)
-            width = max(1, int(src_w * scale))
-            height = max(1, int(src_h * scale))
+            width = max(2, int(src_w * scale))
+            height = max(2, int(src_h * scale))
         else:
             width, height = src_w, src_h
 
-        viewport.saveScreenshot(filepath, width, height)
+        settings = scene_viewer.flipbookSettings().stash()
+        frame = hou.frame()
+        settings.frameRange((frame, frame))
+        settings.output(filepath)
+        settings.outputToMPlay(False)
+        settings.useResolution(True)
+        settings.resolution((width, height))
+        scene_viewer.flipbook(viewport, settings)
+        if not os.path.exists(filepath):
+            raise RuntimeError(f"Houdini did not create viewport screenshot: {filepath}")
+
         return {
             "success": True,
             "width": width,
@@ -532,13 +617,6 @@ class HoudiniMCPServer:
         location=(0.0, 0.0, 0.0),
     ):
         shape = shape.lower()
-        obj = hou.node("/obj")
-        if not obj:
-            raise RuntimeError("/obj context not found")
-
-        geo_name = name or f"{shape}_geo"
-        geo = obj.createNode("geo", node_name=geo_name)
-
         sop_map = {
             "box": "box",
             "sphere": "sphere",
@@ -551,17 +629,38 @@ class HoudiniMCPServer:
         sop_type = sop_map.get(shape)
         if not sop_type:
             raise ValueError(f"Unknown shape: {shape}. Use one of {sorted(sop_map)}")
+        size = float(size)
+        if not math.isfinite(size) or size <= 0:
+            raise ValueError("size must be a finite number greater than zero")
+        if len(location) != 3:
+            raise ValueError("location must contain exactly three values")
+        location = tuple(float(component) for component in location)
+        if not all(math.isfinite(component) for component in location):
+            raise ValueError("location values must be finite numbers")
+
+        parent = hou.node(parent_path)
+        if not parent:
+            raise ValueError(f"Parent node not found: {parent_path}")
+
+        geo_name = name or f"{shape}_geo"
+        geo = parent.createNode("geo", node_name=geo_name)
 
         sop = geo.createNode(sop_type, node_name=shape)
-        if shape == "box" and sop.parm("size"):
-            sop.parm("size").set(size)
-        elif shape == "sphere" and sop.parm("radx"):
-            sop.parm("radx").set(size / 2.0)
-            sop.parm("rady").set(size / 2.0)
-            sop.parm("radz").set(size / 2.0)
-        elif shape == "grid" and sop.parm("sizex"):
-            sop.parm("sizex").set(size)
-            sop.parm("sizey").set(size)
+        if shape == "box":
+            sop.parmTuple("size").set((size, size, size))
+        elif shape == "sphere":
+            sop.parmTuple("rad").set((size / 2.0,) * 3)
+        elif shape == "grid":
+            sop.parmTuple("size").set((size, size))
+        elif shape == "tube":
+            sop.parmTuple("rad").set((size / 2.0, size / 2.0))
+            sop.parm("height").set(size)
+        elif shape == "torus":
+            sop.parmTuple("rad").set((size / 2.0, size / 8.0))
+        elif shape == "circle":
+            sop.parmTuple("rad").set((size / 2.0, size / 2.0))
+        elif shape == "line":
+            sop.parm("dist").set(size)
 
         sop.setDisplayFlag(True)
         sop.setRenderFlag(True)
@@ -585,7 +684,9 @@ def start_server(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
         print(f"PlygonMCP: server already running on {_server.host}:{_server.port}")
         return _server
     _server = HoudiniMCPServer(host=host, port=port)
-    _server.start()
+    if not _server.start():
+        _server = None
+        return None
     return _server
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import socket
 import threading
 from pathlib import Path
@@ -8,6 +9,12 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_all_repository_json_files_are_valid():
+    repo_root = ROOT.parent
+    for path in repo_root.rglob("*.json"):
+        json.loads(path.read_text(encoding="utf-8"))
 
 
 def test_addon_file_exists_and_has_bl_info():
@@ -22,7 +29,10 @@ def test_addon_file_exists_and_has_bl_info():
 def test_package_version():
     import plygon_blender_mcp
 
-    assert plygon_blender_mcp.__version__
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^version = "([^"]+)"', pyproject, re.MULTILINE)
+    assert match
+    assert plygon_blender_mcp.__version__ == match.group(1)
 
 
 def test_extract_one_json_concatenated_payloads():
@@ -114,6 +124,7 @@ def test_resolve_loopback_host():
 
     assert resolve_loopback_host("localhost") == "127.0.0.1"
     assert resolve_loopback_host("::1") == "127.0.0.1"
+    assert resolve_loopback_host("") == "127.0.0.1"
     assert resolve_loopback_host("127.0.0.1") == "127.0.0.1"
     assert resolve_loopback_host("10.0.0.5") == "10.0.0.5"
 
@@ -152,12 +163,82 @@ def test_blender_error_keeps_connection():
     t.join(timeout=2)
 
 
+def test_blender_preserves_falsy_result():
+    from plygon_blender_mcp.connection import BlenderConnection
+
+    payload = (json.dumps({"status": "success", "result": False}) + "\n").encode("utf-8")
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    host, port = server.getsockname()
+
+    def serve():
+        client, _ = server.accept()
+        with client:
+            client.recv(65536)
+            client.sendall(payload)
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+    conn = BlenderConnection(host=host, port=port)
+
+    assert conn.send_command("ping") is False
+
+    conn.disconnect()
+    server.close()
+    t.join(timeout=2)
+
+
+def test_blender_malformed_status_keeps_aligned_connection():
+    from plygon_blender_mcp.connection import BlenderConnection
+
+    malformed = (json.dumps({"status": "unexpected"}) + "\n").encode("utf-8")
+    ok = (json.dumps({"status": "success", "result": 0}) + "\n").encode("utf-8")
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    host, port = server.getsockname()
+
+    def serve():
+        client, _ = server.accept()
+        with client:
+            client.recv(65536)
+            client.sendall(malformed)
+            client.recv(65536)
+            client.sendall(ok)
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+    conn = BlenderConnection(host=host, port=port)
+
+    with pytest.raises(ValueError, match="Malformed response"):
+        conn.send_command("ping")
+    assert conn.sock is not None
+    assert conn.send_command("ping") == 0
+
+    conn.disconnect()
+    server.close()
+    t.join(timeout=2)
+
+
 def test_windows_mcp_config_uses_uvx_exe():
     cfg = json.loads((ROOT.parent / "configs" / "cursor.mcp.windows.json").read_text(encoding="utf-8"))
     blender = cfg["mcpServers"]["plygon-blender"]
     assert "%USERPROFILE%\\.local\\bin\\uvx.exe" in blender["args"]
     assert blender["env"]["BLENDER_HOST"] == "127.0.0.1"
-    assert "houdini" in cfg["mcpServers"]
+    assert "plygon-houdini" in cfg["mcpServers"]
+
+
+def test_root_readme_embeds_both_combined_cursor_configs():
+    repo_root = ROOT.parent
+    readme = (repo_root / "README.md").read_text(encoding="utf-8")
+
+    for name in ("cursor.mcp.windows.json", "cursor.mcp.json"):
+        config = (repo_root / "configs" / name).read_text(encoding="utf-8").strip()
+        assert config in readme
+
+
+def test_server_tools_registered():
     pytest.importorskip("mcp")
     from plygon_blender_mcp.server import mcp
 

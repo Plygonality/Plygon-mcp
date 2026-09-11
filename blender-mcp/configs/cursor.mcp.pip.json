@@ -1,16 +1,14 @@
 {
   "mcpServers": {
     "plygon-blender": {
-      "command": "python",
+      "command": "REPLACE_WITH_ABSOLUTE_PATH_TO_EDITABLE_VENV_PYTHON",
       "args": [
         "-m",
         "plygon_blender_mcp.server"
       ],
-      "cwd": "REPLACE_WITH_ABSOLUTE_PATH_TO/blender-mcp",
       "env": {
         "BLENDER_HOST": "127.0.0.1",
-        "BLENDER_PORT": "9876",
-        "PYTHONPATH": "REPLACE_WITH_ABSOLUTE_PATH_TO/blender-mcp/src"
+        "BLENDER_PORT": "9876"
       }
     }
   }

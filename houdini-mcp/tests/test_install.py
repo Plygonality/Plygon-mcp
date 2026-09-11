@@ -74,6 +74,23 @@ def test_linux_detects_home_houdini21(tmp_path, monkeypatch):
     assert "houdini21.0" in found
 
 
+def test_macos_detects_numeric_preferences_folder(tmp_path, monkeypatch):
+    inst = _load_install_package()
+    numeric = tmp_path / "Library" / "Preferences" / "houdini" / "21.0"
+    numeric.mkdir(parents=True)
+    legacy = tmp_path / "houdini20.5"
+    legacy.mkdir()
+    monkeypatch.setattr(inst.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(inst.Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.delenv("HOUDINI_USER_PREF_DIR", raising=False)
+    monkeypatch.delenv("HOUDINIMCP_PREF_DIR", raising=False)
+
+    found = inst.candidate_pref_dirs()
+
+    assert numeric in found
+    assert legacy in found
+
+
 def test_install_writes_packages_wrapper_json(tmp_path):
     inst = _load_install_package()
     package_src = ROOT / "package"

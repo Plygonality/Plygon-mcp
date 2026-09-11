@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 
-def test_imports() -> None:
+def check_imports() -> None:
     from plygon_blender_mcp import __version__
     from plygon_blender_mcp.connection import BlenderConnection, DEFAULT_HOST, DEFAULT_PORT
     from plygon_blender_mcp.server import mcp, main
@@ -33,7 +33,7 @@ def test_imports() -> None:
     print(f"OK imports (version {__version__})")
 
 
-def test_tool_registration() -> None:
+def check_tool_registration() -> None:
     from plygon_blender_mcp.server import mcp
 
     # FastMCP keeps tools in an internal registry; probe via list_tools if available.
@@ -54,7 +54,7 @@ def test_tool_registration() -> None:
         print("OK server module loaded (tool manager introspection unavailable)")
 
 
-def test_live_ping(host: str, port: int) -> None:
+def run_live_ping(host: str, port: int) -> None:
     from plygon_blender_mcp.connection import BlenderConnection
 
     conn = BlenderConnection(host=host, port=port)
@@ -85,14 +85,14 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=9876)
     args = parser.parse_args()
 
-    test_imports()
-    test_tool_registration()
+    check_imports()
+    check_tool_registration()
 
     if args.live:
         if not port_open(args.host, args.port):
             print(f"FAIL: nothing listening on {args.host}:{args.port} (connection refused). Start the Blender add-on server.")
             return 1
-        test_live_ping(args.host, args.port)
+        run_live_ping(args.host, args.port)
     else:
         print("Skip live ping (pass --live when Blender addon is running)")
 

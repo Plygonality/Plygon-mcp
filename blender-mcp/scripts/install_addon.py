@@ -3,8 +3,8 @@
 
 This script is located via __file__, so you can run it from any working directory.
 
-  python blender-mcp/scripts/install_addon.py
-  python blender-mcp/scripts/install_addon.py --addons-dir "C:\\Users\\you\\AppData\\Roaming\\Blender Foundation\\Blender\\4.2\\scripts\\addons"
+  uv run python blender-mcp/scripts/install_addon.py
+  uv run python blender-mcp/scripts/install_addon.py --addons-dir "C:\\Users\\you\\AppData\\Roaming\\Blender Foundation\\Blender\\4.2\\scripts\\addons"
 
 uvx / Cursor MCP does not install this add-on. Green in Customize → MCPs is not enough;
 you still have to enable the add-on and click Start MCP Server (Online · port 9876).
@@ -15,9 +15,12 @@ from __future__ import annotations
 import argparse
 import os
 import platform
+import re
 import shutil
 import sys
 from pathlib import Path
+
+BLENDER_VERSION_NAME = re.compile(r"^\d+(?:\.\d+)+$")
 
 
 def unique_dirs(dirs: list[Path]) -> list[Path]:
@@ -64,9 +67,12 @@ def candidate_addon_dirs() -> list[Path]:
         except OSError:
             continue
         for version_dir in sorted(versions, reverse=True):
+            if not version_dir.is_dir() or not BLENDER_VERSION_NAME.match(version_dir.name):
+                continue
             addons = version_dir / "scripts" / "addons"
-            if addons.is_dir():
-                found.append(addons)
+            # A fresh Blender profile has the version folder but may not have
+            # created scripts/addons yet. install_addon() creates it safely.
+            found.append(addons)
     return unique_dirs(found)
 
 
