@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import socket
 import threading
 from pathlib import Path
@@ -39,7 +40,20 @@ def test_shelf_tool_exists():
 def test_package_version():
     import plygon_houdini_mcp
 
-    assert plygon_houdini_mcp.__version__
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^version = "([^"]+)"', pyproject, re.MULTILINE)
+    assert match
+    expected = match.group(1)
+    listener_init = (
+        ROOT
+        / "package"
+        / "scripts"
+        / "python"
+        / "plygon_houdini_mcp"
+        / "__init__.py"
+    ).read_text(encoding="utf-8")
+    assert plygon_houdini_mcp.__version__ == expected
+    assert f'__version__ = "{expected}"' in listener_init
 
 
 def test_extract_one_json_concatenated_payloads():
@@ -129,6 +143,9 @@ def test_resolve_loopback_host():
     from plygon_houdini_mcp.connection import resolve_loopback_host
 
     assert resolve_loopback_host("localhost") == "127.0.0.1"
+    assert resolve_loopback_host("::1") == "127.0.0.1"
+    assert resolve_loopback_host("") == "127.0.0.1"
+    assert resolve_loopback_host("10.0.0.5") == "10.0.0.5"
 
 
 def test_houdini_error_keeps_connection():
@@ -160,6 +177,64 @@ def test_houdini_error_keeps_connection():
         conn.send_command("ping")
     assert conn.sock is not None
     assert conn.send_command("ping") == {"pong": True}
+    conn.disconnect()
+    server.close()
+    t.join(timeout=2)
+
+
+def test_houdini_preserves_falsy_result():
+    from plygon_houdini_mcp.connection import HoudiniConnection
+
+    payload = (json.dumps({"status": "success", "result": False}) + "\n").encode("utf-8")
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    host, port = server.getsockname()
+
+    def serve():
+        client, _ = server.accept()
+        with client:
+            client.recv(65536)
+            client.sendall(payload)
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+    conn = HoudiniConnection(host=host, port=port)
+
+    assert conn.send_command("ping") is False
+
+    conn.disconnect()
+    server.close()
+    t.join(timeout=2)
+
+
+def test_houdini_malformed_status_keeps_aligned_connection():
+    from plygon_houdini_mcp.connection import HoudiniConnection
+
+    malformed = (json.dumps({"status": "unexpected"}) + "\n").encode("utf-8")
+    ok = (json.dumps({"status": "success", "result": 0}) + "\n").encode("utf-8")
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    host, port = server.getsockname()
+
+    def serve():
+        client, _ = server.accept()
+        with client:
+            client.recv(65536)
+            client.sendall(malformed)
+            client.recv(65536)
+            client.sendall(ok)
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+    conn = HoudiniConnection(host=host, port=port)
+
+    with pytest.raises(ValueError, match="Malformed response"):
+        conn.send_command("ping")
+    assert conn.sock is not None
+    assert conn.send_command("ping") == 0
+
     conn.disconnect()
     server.close()
     t.join(timeout=2)

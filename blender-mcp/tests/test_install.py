@@ -37,6 +37,22 @@ def test_windows_addon_roots_use_appdata(tmp_path, monkeypatch):
     assert addons in found
 
 
+def test_fresh_blender_profile_does_not_need_existing_addons_dir(tmp_path, monkeypatch):
+    inst = _load_install_addon()
+    appdata = tmp_path / "AppData" / "Roaming"
+    version_dir = appdata / "Blender Foundation" / "Blender" / "4.3"
+    version_dir.mkdir(parents=True)
+    expected = version_dir / "scripts" / "addons"
+    monkeypatch.setattr(inst.platform, "system", lambda: "Windows")
+    monkeypatch.setenv("APPDATA", str(appdata))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "AppData" / "Local"))
+
+    found = inst.candidate_addon_dirs()
+
+    assert expected in found
+    assert not expected.exists()
+
+
 def test_refused_message_mentions_n_panel():
     from plygon_blender_mcp.connection import REFUSED_MESSAGE, TIMEOUT_MESSAGE
 
