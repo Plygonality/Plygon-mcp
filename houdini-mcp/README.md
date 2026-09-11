@@ -1,4 +1,4 @@
-<p align="center"><strong>Cursor talks. Houdini builds. Your files never leave the machine.</strong></p>
+<p align="center"><strong>Cursor talks. Houdini builds. The DCC bridge stays local by default.</strong></p>
 
 <p align="center">
   <a href="https://github.com/Plygonality/Plygon-mcp"><img src="https://img.shields.io/github/stars/Plygonality/Plygon-mcp?style=flat-square&color=ff6a1a" alt="GitHub stars"></a>
@@ -33,13 +33,15 @@ Most "AI for Houdini" stacks want your scene in the cloud, or they dump hundreds
 Plygon is the opposite:
 
 - **Local.** The MCP and Houdini talk on `127.0.0.1:9877`. That's it.
-- **No telemetry.** Prompts, screenshots, and hips stay with you.
+- **No bridge telemetry.** Plygon does not phone home. Cursor may send prompts, scene data, and screenshots to your configured model provider.
 - **Small enough to fork.** One Houdini package. One Python server. Read it in an afternoon, then make it yours.
 - **Built for Cursor agents.** Structured tools for the boring bits, `execute_houdini_code` for the rest, viewport capture so the model can *see*.
 
 ---
 
 ## Get it from GitHub
+
+Installing both DCCs? Use the canonical [click-by-click Blender + Houdini guide](../README.md#install-both-mcps--exact-click-by-click-guide).
 
 ```bash
 git clone https://github.com/Plygonality/Plygon-mcp.git
@@ -50,6 +52,8 @@ Or hit **Fork** — this repo is MIT on purpose.
 
 `uvx` in Cursor's `mcp.json` does **not** install this package. A `.cursor\houdini-mcp` folder is not the repo. Run the installer from this clone (the script finds its own files, so a full path works from any directory).
 
+Install uv first if Step 1 of the [canonical guide](../README.md#step-1--install-uv-once) has not been completed. The installer uses uv's managed Python; a separate global `python` command is not required.
+
 ### 1. Install the Houdini package
 
 **Windows:**
@@ -58,27 +62,22 @@ Or hit **Fork** — this repo is MIT on purpose.
 .\scripts\install-houdini.ps1
 ```
 
-or:
-
-```powershell
-python houdini-mcp\scripts\install_package.py
-```
-
 The installer looks for `Documents\houdini21.0` **and** `OneDrive\Documenten\houdini21.0` (Dutch OneDrive). That is `houdini21.0` as the folder name, not `Documents\houdini\21.0`.
 
 If it cannot find prefs, open Houdini once, quit, then:
 
 ```powershell
-python houdini-mcp\scripts\install_package.py --list
-python houdini-mcp\scripts\install_package.py --pref-dir "$env:USERPROFILE\Documents\houdini21.0"
-python houdini-mcp\scripts\install_package.py --pref-dir "$env:USERPROFILE\OneDrive\Documenten\houdini21.0"
+.\scripts\install-houdini.ps1 --list
+.\scripts\install-houdini.ps1 --pref-dir "$env:USERPROFILE\Documents\houdini21.0"
+.\scripts\install-houdini.ps1 --pref-dir "$env:USERPROFILE\OneDrive\Documenten\houdini21.0"
 ```
 
 **macOS / Linux:**
 
 ```bash
-python houdini-mcp/scripts/install_package.py
-# or: python houdini-mcp/scripts/install_package.py --pref-dir ~/houdini21.0
+"$HOME/.local/bin/uv" run --no-project python houdini-mcp/scripts/install_package.py
+# macOS explicit: ... --pref-dir "$HOME/Library/Preferences/houdini/21.0"
+# Linux explicit: ... --pref-dir "$HOME/houdini21.0"
 ```
 
 You should see both:
@@ -101,8 +100,13 @@ listener.start_server(port=9877)
 
 You want: `PlygonMCP: listening on 127.0.0.1:9877`
 
-Optional shelf: **Shelf pane → right-click → Shelves → Import** →  
-`Documents\houdini21.0\packages\plygon_houdini_mcp\toolbar\plygon_houdini_mcp.shelf` → **Start MCP Server**.
+Optional shelf: **Shelf pane → right-click → Shelves → Import** and choose `plygon_houdini_mcp.shelf` from:
+
+- Windows: `Documents\houdini21.0\packages\plygon_houdini_mcp\toolbar\`
+- macOS: `~/Library/Preferences/houdini/21.0/packages/plygon_houdini_mcp/toolbar/`
+- Linux: `~/houdini21.0/packages/plygon_houdini_mcp/toolbar/`
+
+Then click **Start MCP Server**.
 
 Houdini needs a GUI session. Batch `hython` without a listener won't accept TCP commands.
 
@@ -120,7 +124,7 @@ Cursor does **not** use Settings → MCP. Use **Customize → MCPs**.
 4. Cursor opens `mcp.json` (`C:\Users\<you>\.cursor\mcp.json` on Windows, `~/.cursor/mcp.json` on Mac/Linux).
 5. Paste the JSON below. If `plygon-blender` is already there, add `"plygon-houdini"` next to it (comma after the previous server). Do not replace the whole file.
 6. **Ctrl+S** / **Cmd+S**.
-7. **plygon-houdini** / **houdini** should show **Connected**, green, with tools listed.
+7. **plygon-houdini** should show **Connected**, green, with tools listed.
 
 **Windows:** paste [`../configs/cursor.mcp.windows.json`](../configs/cursor.mcp.windows.json) (Houdini + Blender; uses `%USERPROFILE%\\.local\\bin\\uvx.exe`). Fully quit Cursor after installing [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
@@ -130,7 +134,7 @@ Cursor does **not** use Settings → MCP. Use **Customize → MCPs**.
 {
   "mcpServers": {
     "plygon-houdini": {
-      "command": "uvx",
+      "command": "${userHome}/.local/bin/uvx",
       "args": [
         "--from",
         "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=houdini-mcp",
@@ -145,9 +149,11 @@ Cursor does **not** use Settings → MCP. Use **Customize → MCPs**.
 }
 ```
 
-**Local clone:** [`configs/cursor.mcp.json`](configs/cursor.mcp.json) · **pip:** [`configs/cursor.mcp.pip.json`](configs/cursor.mcp.pip.json)
+**Local clone:** [`configs/cursor.mcp.json`](configs/cursor.mcp.json) · **editable venv:** [`configs/cursor.mcp.pip.json`](configs/cursor.mcp.pip.json)
 
-Do not also enable the project [`.cursor/mcp.json`](../.cursor/mcp.json) if the same ports are already in your user `mcp.json` — that starts a second client against one Houdini socket.
+Cursor merges same-name user and project MCP definitions, with project fields taking precedence. Open another local project to test the user-wide config exactly. Do not add this bridge under a second name, because differently named entries can compete for port 9877.
+
+Advanced editable install: run `uv venv .venv`, then `uv pip install --python .venv -e houdini-mcp` from the repo root. Replace the command placeholder in the editable-venv config with the absolute `.venv\Scripts\python.exe` path on Windows or `.venv/bin/python` path on macOS/Linux. The package is not currently published on PyPI.
 
 ### 4. Try it
 
@@ -169,9 +175,9 @@ More copy-paste prompts: [`examples/prompts.md`](examples/prompts.md)
 |------|----------------|
 | `get_scene_info` / `list_nodes` / `get_node_info` | Orient before touching anything |
 | `get_viewport_screenshot` | Visual QA — the agent *looks* |
-| `create_primitive` | box, sphere, grid, tube, torus, circle, line (new geo + SOP) |
+| `create_primitive` | Box, sphere, grid, tube, torus, circle, or line under the requested parent; `size` applies to every shape |
 | `create_node` / `delete_node` / `connect_nodes` / `layout_nodes` | Network graph edits |
-| `set_node_parm` / `cook_node` | Parameters and geometry refresh |
+| `set_node_parm` / `cook_node` | Scalar or tuple parameters (for example `t: [1, 2, 3]`) and geometry refresh |
 | `execute_houdini_code` | Full `hou` — VEX wrangles, DOPs, LOPs, whatever you can script |
 | `execute_hscript` | HScript escape hatch |
 | `save_hip` | Save or save-as the current hip |
@@ -207,7 +213,7 @@ Prefer structured tools for simple edits. Use `execute_houdini_code` in small st
 
 ## Protocol
 
-JSON over TCP, executed on Houdini's main thread via the UI event loop (`hou.ui.addEventLoopCallback`). Commands run **directly** on that callback — do not wait on `hdefereval.executeInMainThreadWithResult` from there or Houdini freezes (`queued ping`, no reply, Cursor timeout).
+Newline-framed JSON over TCP, executed on Houdini's main thread via the UI event loop (`hou.ui.addEventLoopCallback`). `JSONDecoder.raw_decode` handles concatenated parallel commands one value at a time and leaves incomplete trailing bytes buffered. Commands run **directly** on the UI callback — do not wait on `hdefereval.executeInMainThreadWithResult` from there or Houdini freezes (`queued ping`, no reply, Cursor timeout).
 
 ```json
 {"type": "get_scene_info", "params": {"limit": 50}}
@@ -225,7 +231,7 @@ JSON over TCP, executed on Houdini's main thread via the UI event loop (`hou.ui.
 cd houdini-mcp
 uv sync --extra dev
 uv run python scripts/smoke_test.py
-uv run pytest tests/ -q
+uv run pytest -q
 uv run python scripts/smoke_test.py --live   # Houdini listener must be running
 ```
 
@@ -233,7 +239,7 @@ uv run python scripts/smoke_test.py --live   # Houdini listener must be running
 
 ## Security
 
-`execute_houdini_code` is full `hou` on your machine. Treat it like a macro with root access to the hip. Save first. Don't expose the TCP port past localhost.
+`execute_houdini_code` and `execute_hscript` run with the same permissions as Houdini, including access to your files and network. The listener has no TCP authentication: any local process that reaches port 9877 can call it. Save first, review tool approvals, and never expose the port beyond localhost. Tool results sent back to Cursor may be forwarded to your configured model provider.
 
 ---
 
@@ -247,10 +253,11 @@ uv run python scripts/smoke_test.py --live   # Houdini listener must be running
 | `spawn uvx ENOENT` / `'uvx' is not recognized` | Use `%USERPROFILE%\\.local\\bin\\uvx.exe`; fully quit Cursor |
 | Green MCP, `Could not connect` | Listener not started. Python Shell `listener.start_server(port=9877)` |
 | `Request timed out` / Python Shell “not responding” | Force-quit Houdini, reinstall package (listener deadlock is fixed in 0.1.1+), start again |
+| Listener refuses to start in `hython` | Expected: the bridge requires the normal Houdini GUI and now fails fast without it |
 | Other MCP on port 8100 | Not Plygon. Plygon is 9877 |
 | Cloud Agent ping fails | Use a **local** Agent chat |
 | Timeouts on long cooks | Keep Houdini in the foreground; smaller code chunks |
-| Black / missing screenshots | Keep a Scene Viewer pane open |
+| Black / missing screenshots | Reinstall the latest package, restart Houdini, and keep a Scene Viewer pane open; capture uses Houdini's one-frame flipbook API |
 
 Windows port check:
 

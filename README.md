@@ -18,7 +18,9 @@
 
 A tech-art studio repo of **local MCP bridges** you can fork, run, and actually own.
 
-Cursor's agents already write code. **Plygon gives them hands inside your DCC** — inspect the scene, make edits, and screenshot the viewport so they can check their own work. Nothing leaves localhost. No telemetry. No cloud that trains on your `.blend` or `.hip`.
+Cursor's agents already write code. **Plygon gives them hands inside your DCC** — inspect the scene, make edits, and screenshot the viewport so they can check their own work. The bridge has no telemetry, and its DCC connection stays on IPv4 loopback by default.
+
+The bridge is local; Cursor's model may not be. Tool results—including scene metadata and screenshots—become part of your Cursor conversation and may be sent to the model provider configured in Cursor. Check that provider's privacy settings before using sensitive production files.
 
 Local, no-telemetry fork of the [ahujasid/blender-mcp](https://github.com/ahujasid/blender-mcp) localhost-TCP + FastMCP pattern, shaped for Cursor and studio pipelines. See [`THIRD_PARTY.md`](THIRD_PARTY.md).
 
@@ -53,83 +55,199 @@ This is not a 300-tool kitchen sink. It's the layer tech artists actually keep: 
 
 ---
 
-## Clone once
+## Install both MCPs — exact click-by-click guide
+
+Follow every numbered step. Cursor needs three separate pieces:
+
+1. `uvx`, which starts each MCP client.
+2. The Blender add-on and Houdini package, which run inside the DCCs.
+3. One valid Cursor `mcp.json` containing both server entries.
+
+Green rows in Cursor prove only item 1. They do not prove that Blender or Houdini is listening.
+
+### Step 0 — Download this repository
+
+**Without Git:**
+
+1. Open [github.com/Plygonality/Plygon-mcp](https://github.com/Plygonality/Plygon-mcp).
+2. Click the green **Code** button.
+3. Click **Download ZIP**.
+4. Open Downloads and extract the ZIP.
+5. Move the extracted folder to a permanent location. Example: `C:\Users\<your-name>\Documents\Plygon-mcp`.
+6. Open that folder and confirm it contains this `README.md`, `blender-mcp`, `houdini-mcp`, and `scripts`.
+
+**With Git:** open PowerShell or Terminal and paste:
 
 ```bash
 git clone https://github.com/Plygonality/Plygon-mcp.git
 cd Plygon-mcp
 ```
 
-`uvx` in `mcp.json` only starts Cursor's Python MCP client. **It does not install** the Blender add-on or the Houdini package. You still clone (or unzip) this repo and install into the DCC.
+The extracted or cloned directory is called the **repo folder** below. A `.cursor/houdini-mcp` cache directory is not the repo.
 
-Do not run `python houdini-mcp\scripts\install_package.py` from your user home. Either `cd` into this clone, or run [`scripts/install-houdini.ps1`](scripts/install-houdini.ps1) / [`scripts/install-blender.ps1`](scripts/install-blender.ps1) (they locate the repo from their own path). A folder named `houdini-mcp` under `.cursor` is not this package.
+### Step 1 — Install `uv` once
 
-Pick one DCC below — or set up both. The project [`.cursor/mcp.json`](.cursor/mcp.json) registers both when you open this repo. If you already have the same servers in user `mcp.json`, turn project MCP off or you will run **two** clients against the same TCP port.
+Cursor uses `uvx` to download and start both Python MCP clients. `uvx` does not install anything inside Blender or Houdini.
 
----
+**Windows:**
 
-## Blender MCP
+1. Open the Start menu.
+2. Search for and open **PowerShell**.
+3. Paste this command and press Enter:
 
-```
-Cursor agent  →  plygon-blender-mcp  →  127.0.0.1:9876  →  Blender add-on  →  bpy  →  your .blend
-```
+   ```powershell
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   ```
 
-### 1. Install uv (one time)
+4. Paste this command and press Enter:
 
-Cursor launches the Blender bridge with `uvx`. Install uv, then **fully quit Cursor** so it can see the new program.
+   ```powershell
+   & "$env:USERPROFILE\.local\bin\uvx.exe" --version
+   ```
 
-**Windows** — open PowerShell and paste:
+5. Continue only after it prints a version number.
+
+**macOS or Linux:**
+
+1. Open **Terminal**.
+2. Paste these three lines:
+
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   source "$HOME/.local/bin/env"
+   "$HOME/.local/bin/uvx" --version
+   ```
+
+3. Continue only after the last line prints a version number.
+
+Do not use `pip install uv`. The commands above put `uv` and `uvx` in the location used by the supplied Cursor configs.
+
+### Step 2 — Install and start the Blender add-on
+
+The manual install works on every operating system and does not require a separate Python installation:
+
+1. Open **Blender** normally. Do not use `blender -b`.
+2. Click **Edit** → **Preferences**.
+3. Click **Add-ons**.
+4. Click **Install from Disk…**. In versions that hide it, first open the small menu in the upper-right of the Add-ons page.
+5. Browse to the repo folder.
+6. Open `blender-mcp` → `addon`.
+7. Select `blender_mcp_addon.py`.
+8. Click **Install from Disk**.
+9. In the Add-ons search box, type `Plygon`.
+10. Enable the checkbox beside **Interface: Plygon Blender MCP**.
+11. Close Preferences.
+12. Put the mouse pointer over the 3D Viewport and press **N**.
+13. Click the **PlygonMCP** tab on the right side of the viewport.
+14. Leave **Port** at `9876`.
+15. Click **Start MCP Server**.
+16. Confirm the panel says **Online · port 9876**.
+17. Leave this Blender window open.
+
+Optional scripted install:
+
+- Windows: open PowerShell in the repo folder and run `.\scripts\install-blender.ps1`.
+- macOS/Linux: from the repo folder run:
+
+  ```bash
+  "$HOME/.local/bin/uv" run --no-project python blender-mcp/scripts/install_addon.py
+  ```
+
+The installer now creates a missing `scripts/addons` directory for a fresh Blender profile. Restart Blender after using the script.
+
+### Step 3 — Install and start the Houdini package
+
+1. Open the normal Houdini GUI once.
+2. Fully quit Houdini. This creates its user preferences directory.
+3. Open PowerShell/Terminal in the repo folder:
+   - Windows Explorer: open the repo folder, right-click empty space, then click **Open in Terminal**.
+   - macOS Finder: right-click the repo folder and choose **New Terminal at Folder**, or use `cd`.
+4. Run the installer:
+
+   **Windows PowerShell**
+
+   ```powershell
+   .\scripts\install-houdini.ps1
+   ```
+
+   **macOS/Linux**
+
+   ```bash
+   "$HOME/.local/bin/uv" run --no-project python houdini-mcp/scripts/install_package.py
+   ```
+
+5. Confirm it prints both `Installed package → ...` and `Wrote Houdini packages JSON → ...`.
+
+If automatic detection fails, replace `21.0` with your installed Houdini version and run one matching command:
+
+**Windows**
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-$env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
-uvx --version
+.\scripts\install-houdini.ps1 --pref-dir "$env:USERPROFILE\Documents\houdini21.0"
+.\scripts\install-houdini.ps1 --pref-dir "$env:USERPROFILE\OneDrive\Documenten\houdini21.0"
 ```
 
-You should see a version number. Then quit Cursor from the **system tray** (right-click the Cursor icon near the clock → Quit), not just the window. Reopen Cursor.
-
-**macOS / Linux:**
+**macOS**
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-uvx --version
+"$HOME/.local/bin/uv" run --no-project python houdini-mcp/scripts/install_package.py --pref-dir "$HOME/Library/Preferences/houdini/21.0"
 ```
 
-Quit Cursor completely (**Cmd+Q** on Mac) and reopen. Do not `pip install uv`.
+**Linux**
 
-### 2. Install the Blender add-on
+```bash
+"$HOME/.local/bin/uv" run --no-project python houdini-mcp/scripts/install_package.py --pref-dir "$HOME/houdini21.0"
+```
 
-1. Open **Blender** (the normal GUI app — not `blender -b`).
-2. From this repo run `python blender-mcp/scripts/install_addon.py`, **or** **Edit → Preferences → Add-ons → Install from Disk…** and choose [`blender-mcp/addon/blender_mcp_addon.py`](blender-mcp/addon/blender_mcp_addon.py).
-3. Enable **Interface: Plygon Blender MCP** (search “Plygon”).
-4. In the 3D Viewport press **N**.
-5. Open the **PlygonMCP** tab in the sidebar.
-6. Click **Start MCP Server**.
-7. Confirm it says **Online · port 9876**. Leave this Blender window open.
+On Windows, the normal folder is `Documents\houdini21.0`, not `Documents\houdini\21.0`. OneDrive may use a localized name such as `Documenten`.
 
-### 3. Connect Cursor (Customize → MCPs)
+6. Open Houdini again.
+7. Click **Windows** → **Python Shell**.
+8. Click the shell input line.
+9. Paste this one line and press Enter:
 
-1. In Cursor, click **Customize** in the **left sidebar** (same row as Plugins, Skills, Rules).
-2. Click the **MCPs** tab.
-3. Click **+ New MCP Server** (sometimes labeled **Add a Custom MCP Server**).
-4. Cursor opens `mcp.json`:
-   - Windows: `C:\Users\<your-windows-username>\.cursor\mcp.json`
-   - macOS / Linux: `~/.cursor/mcp.json`
-5. Paste one of the JSON blocks below.
-6. Press **Ctrl+S** (Windows) or **Cmd+S** (Mac).
-7. Go back to **Customize → MCPs**. **plygon-blender** should appear under **Connected**, green, with tools enabled (~13).
-8. If the toggle is off, turn it **on**.
+   ```python
+   from plygon_houdini_mcp import listener; listener.start_server(port=9877)
+   ```
 
-Green + tools listed only means Cursor spawned `uvx`. The add-on must still say **Online · port 9876** or every tool call will fail with connection refused.
+10. Confirm the shell prints `PlygonMCP: listening on 127.0.0.1:9877`.
+11. Leave Houdini open.
 
-**If `houdini` (or anything else) is already in `mcp.json`:** do not delete it and do not replace the whole file. After that server’s closing `}`, add a comma, then the `"plygon-blender"` block inside `"mcpServers"`. Placeholder text like `{ ...leave existing... }` is not JSON — saving it wipes every MCP.
+Optional shelf button:
 
-**Windows — copy-paste this entire file** if you want Houdini and Blender together:
+1. In a Shelf pane, right-click an empty area.
+2. Click **Shelves** → **Import**.
+3. Select `plygon_houdini_mcp.shelf` from the installed package:
+   - Windows: `Documents\houdini21.0\packages\plygon_houdini_mcp\toolbar\`
+   - macOS: `~/Library/Preferences/houdini/21.0/packages/plygon_houdini_mcp/toolbar/`
+   - Linux: `~/houdini21.0/packages/plygon_houdini_mcp/toolbar/`
+4. Click **Start MCP Server** on the imported **PlygonMCP** shelf.
+
+Plygon uses port `9877`. A message about port `8100` belongs to another Houdini MCP.
+
+### Step 4 — Put both servers in Cursor Customize → MCPs
+
+1. Fully quit Cursor so it detects the newly installed `uv`:
+   - Windows: right-click the Cursor icon in the system tray near the clock → **Quit**.
+   - macOS: click **Cursor** → **Quit Cursor**, or press **Cmd+Q**.
+   - Linux: click **File** → **Exit** (or **Quit**) and ensure every Cursor window closes.
+2. Reopen the desktop Cursor app.
+3. Open the local project where you want to use Blender/Houdini.
+4. Click **Customize** in the left sidebar.
+5. Click the **MCPs** tab.
+6. Click **+ New MCP Server** or **Add a Custom MCP Server**.
+7. Cursor opens your user config:
+   - Windows: `C:\Users\<your-name>\.cursor\mcp.json`
+   - macOS/Linux: `~/.cursor/mcp.json`
+8. If the file is empty or contains only `"mcpServers": {}`, select everything and replace it with the complete block for your operating system below.
+9. If you already have unrelated MCPs, keep them. Add the two `plygon-*` properties inside the existing `"mcpServers"` object and put a comma between every neighboring property. Never paste placeholder text or a second `"mcpServers"` object.
+
+**Windows — copy this complete file:**
 
 ```json
 {
   "mcpServers": {
-    "houdini": {
+    "plygon-houdini": {
       "command": "cmd",
       "args": [
         "/c",
@@ -163,13 +281,25 @@ Green + tools listed only means Cursor spawned `uvx`. The add-on must still say 
 }
 ```
 
-**macOS / Linux — copy-paste this:**
+**macOS/Linux — copy this complete file:**
 
 ```json
 {
   "mcpServers": {
+    "plygon-houdini": {
+      "command": "${userHome}/.local/bin/uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=houdini-mcp",
+        "plygon-houdini-mcp"
+      ],
+      "env": {
+        "HOUDINI_HOST": "127.0.0.1",
+        "HOUDINI_PORT": "9877"
+      }
+    },
     "plygon-blender": {
-      "command": "uvx",
+      "command": "${userHome}/.local/bin/uvx",
       "args": [
         "--from",
         "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=blender-mcp",
@@ -184,134 +314,57 @@ Green + tools listed only means Cursor spawned `uvx`. The add-on must still say 
 }
 ```
 
-Same files live at [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json) and [`blender-mcp/configs/cursor.mcp.git.json`](blender-mcp/configs/cursor.mcp.git.json). Optional one-click: [Add Blender to Cursor](https://cursor.com/link/mcp/install?name=plygon-blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyItLWZyb20iLCJnaXQraHR0cHM6Ly9naXRodWIuY29tL1BseWdvbmFsaXR5L1BseWdvbi1tY3AuZ2l0I3N1YmRpcmVjdG9yeT1ibGVuZGVyLW1jcCIsInBseWdvbi1ibGVuZGVyLW1jcCJdLCJlbnYiOnsiQkxFTkRFUl9IT1NUIjoibG9jYWxob3N0IiwiQkxFTkRFUl9QT1JUIjoiOTg3NiJ9fQ%3D%3D).
+The same complete files are stored at [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json) and [`configs/cursor.mcp.json`](configs/cursor.mcp.json).
 
-**If it is red / Needs Attention:** click the server → **Show Output**. `'uvx' is not recognized` means Cursor still cannot see uv — use the Windows JSON above and fully quit Cursor. If the MCP list goes empty, `mcp.json` is invalid; **Ctrl+Z**, fix braces/commas, save again.
+10. Press **Ctrl+S** on Windows/Linux or **Cmd+S** on macOS.
+11. If every MCP disappears immediately, the JSON is invalid. Press **Ctrl+Z**/**Cmd+Z**, check commas and braces, and save again.
+12. Go back to **Customize** → **MCPs**.
+13. Find **plygon-blender** and **plygon-houdini**.
+14. Turn both toggles on.
+15. Wait for both rows to become green and show their tool lists.
+16. If a row is red, click it → **Show Output** and use the troubleshooting table below.
 
-### 4. Try it
+Opening this repository also loads its project [`.cursor/mcp.json`](.cursor/mcp.json). Cursor merges a user and project server with the same name, and project fields take precedence; it does not launch two copies under that same name. To test the user-wide config exactly, open another local project. Do not add the same bridge under a second name, because differently named entries can start competing clients on one DCC port.
 
-1. Keep Blender open with **Start MCP Server** already clicked (**Online · port 9876**).
-2. In Cursor, open a new **Agent** chat on the desktop (not Ask / not Cloud Agent).
-3. Paste:
+### Step 5 — Ping both DCCs from a local Agent
 
-> Ping Blender. Do not call any other tools.
+1. Check Blender still says **Online · port 9876**.
+2. Check Houdini still says **listening on 127.0.0.1:9877**.
+3. In the desktop Cursor app, open a new **Agent** chat. Do not use Ask mode or a Cloud Agent.
+4. Paste:
 
-4. Approve the tool call if Cursor asks.
-5. Then paste:
+   > Ping Blender. Do not change the scene and do not call any other tool.
 
-> Create a studio-lit chrome Suzanne. Screenshot when it looks like a keyframe.
+5. Approve the tool call if Cursor asks. Confirm it returns `pong`.
+6. Paste:
 
-### What the agent can do
+   > Ping Houdini. Do not change the hip and do not call any other tool.
 
-| Tool | Purpose |
-|------|---------|
-| `get_scene_info` / `list_objects` / `get_object_info` | Orient before editing |
-| `get_viewport_screenshot` | Visual QA |
-| `create_primitive` / `set_material` / `set_object_transform` | Quick layout and look-dev |
-| `execute_blender_code` | Full `bpy` for anything else |
-| `export_scene` | GLB, GLTF, FBX, OBJ, BLEND |
+7. Confirm it returns `pong`.
+8. Verify parallel framing without changing either scene:
 
-Prompts: [`blender-mcp/examples/prompts.md`](blender-mcp/examples/prompts.md)
+   > In parallel, ping Blender and get Blender scene info. Then, in parallel, ping Houdini and get Houdini scene info. Do not modify anything.
 
----
+A Cloud Agent cannot reach `127.0.0.1` on your PC. These checks must run in a local desktop Agent chat.
 
-## Houdini MCP
+### Final checklist
 
-```
-Cursor agent  →  plygon-houdini-mcp  →  127.0.0.1:9877  →  Houdini listener  →  hou  →  your .hip
-```
-
-### 1. Install the Houdini package
-
-From **this clone** (any working directory is fine if you use the script path):
-
-```powershell
-# Windows — finds Documents\houdini21.0 and OneDrive\Documenten\houdini21.0
-.\scripts\install-houdini.ps1
-```
-
-```bash
-python houdini-mcp/scripts/install_package.py
-```
-
-If detection fails, open Houdini once so it creates the prefs folder, then pass it:
-
-```powershell
-python houdini-mcp\scripts\install_package.py --pref-dir "$env:USERPROFILE\Documents\houdini21.0"
-python houdini-mcp\scripts\install_package.py --pref-dir "$env:USERPROFILE\OneDrive\Documenten\houdini21.0"
-```
-
-On Windows the folder is `Documents\houdini21.0` (or `houdini20.5`), **not** `Documents\houdini\21.0`. Dutch OneDrive often uses `Documenten`.
-
-The installer copies the package **and** writes `packages\plygon_houdini_mcp.json` next to it. Houdini only loads JSON files sitting directly in `packages/`. Without that wrapper, `from plygon_houdini_mcp import listener` fails.
-
-**Fully quit Houdini and reopen it.**
-
-Optional shelf: **Shelf pane → right-click → Shelves → Import** →  
-`Documents\houdini21.0\packages\plygon_houdini_mcp\toolbar\plygon_houdini_mcp.shelf`
-
-Then **Start MCP Server**, or skip the shelf and use the Python Shell (this is the reliable path):
-
-```python
-from plygon_houdini_mcp import listener
-listener.start_server(port=9877)
-```
-
-You should see `PlygonMCP: listening on 127.0.0.1:9877`. Leave Houdini open.
-
-Houdini needs a GUI session — batch `hython` without the listener won't accept commands.
-
-Plygon is **port 9877**. Another Houdini MCP (for example a log line `Server ready on port 8100`) is a different product and will not answer Plygon tools.
-
-### 2. Connect Cursor
-
-Same as Blender: **Customize** (sidebar) → **MCPs** → **+ New MCP Server** → edit `mcp.json` → **Ctrl+S**. Add `"plygon-houdini"` next to any existing blender server; do not replace the whole file.
-
-**Windows:** use [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json) (both DCCs). **macOS / Linux:** paste:
-
-```json
-{
-  "mcpServers": {
-    "plygon-houdini": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=houdini-mcp",
-        "plygon-houdini-mcp"
-      ],
-      "env": {
-        "HOUDINI_HOST": "127.0.0.1",
-        "HOUDINI_PORT": "9877"
-      }
-    }
-  }
-}
-```
-
-Opening this repo also registers both via [`.cursor/mcp.json`](.cursor/mcp.json).
-
-### 3. Try it
-
-Local Agent chat only:
-
-> Ping Houdini with ping_houdini, then call get_scene_info. Do not change the hip.
-
-Then:
-
-> Create a geo with a grid and mountain SOP. Layout the network, cook it, and screenshot the viewport when it reads as terrain.
+- [ ] Blender add-on enabled; panel says **Online · port 9876**.
+- [ ] Houdini package imports; shell says **listening on 127.0.0.1:9877**.
+- [ ] Cursor **Customize → MCPs → plygon-blender** is green with tools.
+- [ ] Cursor **Customize → MCPs → plygon-houdini** is green with tools.
+- [ ] Blender ping succeeds from a local Agent.
+- [ ] Houdini ping succeeds from a local Agent.
+- [ ] Parallel ping + scene-info calls complete without `Extra data`.
 
 ### What the agent can do
 
-| Tool | Purpose |
-|------|---------|
-| `get_scene_info` / `list_nodes` / `get_node_info` | Orient before editing |
-| `get_viewport_screenshot` | Scene Viewer visual QA |
-| `create_primitive` / `create_node` / `connect_nodes` | SOP networks and primitives |
-| `set_node_parm` / `cook_node` / `layout_nodes` | Parameters, cooks, tidy graphs |
-| `execute_houdini_code` / `execute_hscript` | Full `hou` or HScript escape hatches |
-| `save_hip` | Save or save-as the current hip |
+| DCC | Main tools |
+|---|---|
+| Blender | Scene/object inspection, viewport screenshots, primitives, transforms, materials, selection, Python execution, and export |
+| Houdini | Scene/node inspection, Scene Viewer screenshots, node creation/wiring/layout/cooking, parameters, Python/HScript execution, and hip saving |
 
-Prompts: [`houdini-mcp/examples/prompts.md`](houdini-mcp/examples/prompts.md)
+Copy-paste task prompts: [Blender](blender-mcp/examples/prompts.md) · [Houdini](houdini-mcp/examples/prompts.md)
 
 ---
 
@@ -323,6 +376,9 @@ Prompts: [`houdini-mcp/examples/prompts.md`](houdini-mcp/examples/prompts.md)
 | Green, tools listed, **Could not connect** / connection refused | uvx is up; DCC is not listening | Start MCP Server in the DCC. Confirm port 9876 (Blender) or 9877 (Houdini) |
 | Green, **Request timed out** / Houdini “not responding” after `queued ping` | TCP connected; the listener did not reply | Force-quit the DCC, reinstall the package, start the listener again, keep the GUI in front |
 | ImportError: `No module named 'plygon_houdini_mcp'` | Packages JSON not loaded | Re-run `install_package.py`, confirm `packages/plygon_houdini_mcp.json` exists, restart Houdini |
+| Every MCP disappears after save | `mcp.json` is invalid JSON | Undo immediately; fix the missing comma/brace; keep one top-level `mcpServers` object |
+| Blender says the port is already in use | Another listener owns 9876 | Stop the old add-on/server or choose one matching free port in both Blender and `mcp.json` |
+| Screenshot tool fails | Required viewport is not visible | Keep a 3D Viewport open in Blender and a Scene Viewer pane open in Houdini |
 | Works in a local Agent, fails in Cloud Agent | Cloud `127.0.0.1` is not your PC | Use a desktop Agent chat |
 | Something listening on **8100** | A different Houdini MCP | Ignore it for Plygon. Plygon is **9877** |
 
@@ -332,7 +388,32 @@ Windows port check:
 Get-NetTCPConnection -LocalPort 9876,9877 -State Listen -ErrorAction SilentlyContinue
 ```
 
-Do not run `uvx` / the MCP server yourself in a terminal while Cursor is also launching it. Do not point two MCP clients (Cursor + Claude Desktop, or user + project `mcp.json`) at the same DCC socket.
+Do not run `uvx` manually while Cursor is also launching it. Do not register the same bridge under two different names or point Cursor and another MCP app at the same DCC socket. Same-name user/project entries are merged, with project values taking precedence.
+
+---
+
+## Update an existing installation
+
+After pulling or downloading a newer release:
+
+1. Fully quit Blender and Houdini.
+2. Replace the local repo with the new version, or run `git pull`.
+3. Re-run `.\scripts\install-blender.ps1` and `.\scripts\install-houdini.ps1` on Windows. On macOS/Linux, rerun both `"$HOME/.local/bin/uv" run --no-project python ...` commands from Steps 2 and 3.
+4. Reopen both DCCs and start both listeners again.
+5. Fully quit and reopen Cursor. If `uvx` still runs old code, run `uv cache clean plygon-blender-mcp` and `uv cache clean plygon-houdini-mcp`, then reopen Cursor.
+6. Repeat the final verification checklist above.
+
+The DCC-side add-on/package is copied into Blender/Houdini. A Git update alone does not replace those installed copies.
+
+---
+
+## Privacy and security boundary
+
+- The bridge itself has no telemetry. DCC TCP traffic binds to `127.0.0.1` by default.
+- Cursor can send prompts and tool results to your configured model provider. A screenshot returned to the agent is not guaranteed to remain on your PC.
+- `execute_blender_code`, `execute_houdini_code`, and `execute_hscript` run with the same file and network permissions as Blender or Houdini.
+- Any local process that can connect to ports `9876` or `9877` can call the listener; the TCP protocol has no authentication.
+- Save your `.blend` or `.hip`, review tool approvals, and never expose these ports to a LAN or the internet.
 
 ---
 
@@ -362,6 +443,7 @@ You keep the taste. The agent keeps the clicks.
 | [`scripts/install-houdini.ps1`](scripts/install-houdini.ps1) | Windows installer (any cwd) |
 | [`scripts/install-blender.ps1`](scripts/install-blender.ps1) | Windows installer (any cwd) |
 | [`.cursor/mcp.json`](.cursor/mcp.json) | Project-level Cursor config (both DCCs) |
+| [`CHANGELOG.md`](CHANGELOG.md) | Reliability and setup changes |
 | [`THIRD_PARTY.md`](THIRD_PARTY.md) | Provenance (blender-mcp pattern) |
 
 ---

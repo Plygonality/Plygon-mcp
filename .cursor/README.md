@@ -1,5 +1,9 @@
 Project MCP for this clone. Cursor launches `uv run` against `blender-mcp/` and `houdini-mcp/`.
 
-If you already added `houdini` / `plygon-blender` in **user** `~/.cursor/mcp.json` (the Windows `uvx --from git+…` config), disable project MCP or you will run two clients on 9876 and 9877.
+If the user `~/.cursor/mcp.json` also defines `plygon-houdini` or `plygon-blender`, Cursor merges each same-name server and gives project fields precedence. It does not launch two same-name copies. Open a different local project when you need to verify the user-wide `uvx --from git+…` config exactly.
+
+Do not create a second alias for either bridge: differently named entries can launch competing clients against ports 9876 and 9877.
 
 Green here still only means the stdio process started. Blender and Houdini must be listening in the GUI.
+
+For the complete installation and verification sequence, follow the root [click-by-click guide](../README.md#install-both-mcps--exact-click-by-click-guide).

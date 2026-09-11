@@ -2,7 +2,7 @@
 
 Houdini only loads JSON files that sit **directly** in `packages/` (it does not scan subfolders).
 
-After `python houdini-mcp/scripts/install_package.py` you should have:
+After `"$HOME/.local/bin/uv" run --no-project python houdini-mcp/scripts/install_package.py` on macOS/Linux, or `.\scripts\install-houdini.ps1` on Windows, you should have:
 
 ```text
 houdini21.0/packages/plygon_houdini_mcp.json   ← scanned by Houdini
@@ -19,3 +19,6 @@ listener.start_server(port=9877)
 The inner `plygon_houdini_mcp.json` is for the rare case where someone points `HOUDINI_PACKAGE_DIR` at the package folder itself. The installer always writes the wrapper; do not skip that file.
 
 Windows prefs live at `Documents\houdini21.0` or `OneDrive\Documenten\houdini21.0`, not `Documents\houdini\21.0`.
+macOS prefs normally live at `~/Library/Preferences/houdini/21.0`; Linux normally uses `~/houdini21.0`.
+
+For every Cursor, Blender, and Houdini click, use the root [installation guide](../../README.md#install-both-mcps--exact-click-by-click-guide).
