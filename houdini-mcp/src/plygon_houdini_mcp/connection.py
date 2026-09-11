@@ -14,6 +14,7 @@ logger = logging.getLogger("PlygonHoudiniMCP")
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 9877
+MAX_BUFFER_BYTES = 4 * 1024 * 1024
 
 REFUSED_MESSAGE = (
     "Could not connect to Houdini on {host}:{port} (connection refused). "
@@ -146,21 +147,25 @@ class HoudiniConnection:
             except socket.timeout as e:
                 if not saw_data:
                     raise TimeoutError("No data received from Houdini") from e
-                raise ValueError("Incomplete JSON response from Houdini: timed out") from e
+                raise TimeoutError("Incomplete JSON response from Houdini: timed out") from e
             if not chunk:
                 if not saw_data:
                     raise ConnectionError("Connection closed before receiving any data")
-                raise ValueError("Incomplete JSON response from Houdini: connection closed")
+                raise ConnectionError("Incomplete JSON response from Houdini: connection closed")
             saw_data = True
             self._recv_buf += chunk
+            if len(self._recv_buf) > MAX_BUFFER_BYTES:
+                raise ConnectionError(
+                    f"Houdini response exceeded {MAX_BUFFER_BYTES} buffered bytes"
+                )
 
-    def send_command(self, command_type: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def send_command(self, command_type: str, params: Optional[Dict[str, Any]] = None) -> Any:
         with self._lock:
             return self._send_command_locked(command_type, params)
 
     def _send_command_locked(
         self, command_type: str, params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    ) -> Any:
         if not self.sock and not self.connect():
             raise ConnectionError(
                 REFUSED_MESSAGE.format(host=resolve_loopback_host(self.host), port=self.port)
@@ -175,8 +180,10 @@ class HoudiniConnection:
 
             if response.get("status") == "error":
                 raise RuntimeError(response.get("message", "Unknown error from Houdini"))
-            return response.get("result") or {}
-        except socket.timeout as e:
+            if response.get("status") != "success":
+                raise ValueError(f"Malformed response from Houdini: {response!r}")
+            return response["result"] if "result" in response else {}
+        except (TimeoutError, socket.timeout) as e:
             self._reset_socket()
             raise TimeoutError(
                 TIMEOUT_MESSAGE.format(host=resolve_loopback_host(self.host), port=self.port)
@@ -184,7 +191,7 @@ class HoudiniConnection:
         except (ConnectionError, BrokenPipeError, ConnectionResetError) as e:
             self._reset_socket()
             raise ConnectionError(f"Connection to Houdini lost: {e}") from e
-        except RuntimeError:
+        except (RuntimeError, ValueError):
             raise
         except Exception:
             self._reset_socket()

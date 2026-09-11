@@ -21,13 +21,14 @@ import tempfile
 import threading
 import time
 import traceback
+import uuid
 from contextlib import redirect_stdout
 from bpy.props import IntProperty, BoolProperty, StringProperty
 
 bl_info = {
     "name": "Plygon Blender MCP",
     "author": "Plygon",
-    "version": (1, 0, 2),
+    "version": (1, 0, 3),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar > PlygonMCP",
     "description": "Local MCP bridge so Cursor agents can drive Blender via bpy",
@@ -36,8 +37,12 @@ bl_info = {
 
 ADDON_PROTOCOL_VERSION = 1
 DEFAULT_PORT = 9876
+MAX_BUFFER_BYTES = 4 * 1024 * 1024
+MAX_PENDING_COMMANDS = 128
+MAX_COMMANDS_PER_TICK = 1
 
 _server = None
+_MALFORMED_JSON = object()
 
 
 def _encode_message(obj) -> bytes:
@@ -62,12 +67,73 @@ def _extract_json_objects(buffer: bytes):
         try:
             obj, end = decoder.raw_decode(text, idx)
         except json.JSONDecodeError:
-            break
+            # Every message we emit is newline terminated. If decoding fails
+            # before a newline, discard that malformed frame so one bad
+            # request cannot block every later request on this connection.
+            newline = text.find("\n", idx)
+            if newline < 0:
+                break
+            objects.append(_MALFORMED_JSON)
+            idx = newline + 1
+            continue
         if end <= idx:
             break
         objects.append(obj)
         idx = end
     return objects, text[idx:].encode("utf-8")
+
+
+def _find_view3d_context():
+    """Return one coherent window/scene/view-layer context for bpy.ops."""
+    window_manager = getattr(bpy.context, "window_manager", None)
+    for window in getattr(window_manager, "windows", ()):
+        screen = window.screen
+        for area in screen.areas:
+            if area.type != "VIEW_3D":
+                continue
+            region = next((item for item in area.regions if item.type == "WINDOW"), None)
+            if region is not None:
+                return {
+                    "window": window,
+                    "workspace": getattr(window, "workspace", None),
+                    "screen": screen,
+                    "scene": getattr(window, "scene", None),
+                    "view_layer": getattr(window, "view_layer", None),
+                    "area": area,
+                    "region": region,
+                }
+    return None
+
+
+def _run_operator(operator, *, view3d_context=None, **kwargs):
+    """Run an operator with a stable 3D-view context on Blender 3.x and 4.x."""
+    context_parts = view3d_context or _find_view3d_context()
+    if context_parts is None:
+        return operator(**kwargs)
+
+    override = {key: value for key, value in context_parts.items() if value is not None}
+    if hasattr(bpy.context, "temp_override"):
+        with bpy.context.temp_override(**override):
+            return operator(**kwargs)
+
+    # Blender 3.0/3.1 used a positional override dictionary.
+    legacy_override = bpy.context.copy()
+    legacy_override.update(override)
+    return operator(legacy_override, **kwargs)
+
+
+def _ensure_object_mode(view3d_context=None):
+    context_parts = view3d_context or _find_view3d_context()
+    view_layer = context_parts.get("view_layer") if context_parts else None
+    objects = getattr(view_layer, "objects", None)
+    active = getattr(objects, "active", None)
+    mode = getattr(active, "mode", getattr(bpy.context, "mode", "OBJECT"))
+    if mode != "OBJECT":
+        _run_operator(
+            bpy.ops.object.mode_set,
+            view3d_context=context_parts,
+            mode="OBJECT",
+        )
 
 
 class BlenderMCPServer:
@@ -79,28 +145,28 @@ class BlenderMCPServer:
         self.running = False
         self.socket = None
         self.server_thread = None
-        self.command_queue: queue.Queue = queue.Queue()
+        self.command_queue: queue.Queue = queue.Queue(maxsize=MAX_PENDING_COMMANDS)
         self._clients = set()
         self._clients_lock = threading.Lock()
 
-    def start(self):
+    def start(self) -> bool:
         if bpy.app.background:
             print(
                 "PlygonMCP: cannot start in background mode (blender -b). "
                 "Run Blender with a GUI, or: xvfb-run -a blender"
             )
-            return
+            return False
 
         if self.running:
             print("PlygonMCP: server already running")
-            return
+            return True
 
-        self.running = True
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.socket.bind((self.host, self.port))
             self.socket.listen(5)
+            self.running = True
 
             self.server_thread = threading.Thread(target=self._server_loop, daemon=True)
             self.server_thread.start()
@@ -109,9 +175,11 @@ class BlenderMCPServer:
                 bpy.app.timers.register(self._drain_command_queue, persistent=True)
 
             print(f"PlygonMCP: listening on {self.host}:{self.port}")
+            return True
         except Exception as e:
             print(f"PlygonMCP: failed to start: {e}")
             self.stop()
+            return False
 
     def stop(self):
         self.running = False
@@ -177,14 +245,21 @@ class BlenderMCPServer:
         if not self.running:
             return None
 
-        while True:
+        processed = 0
+        while processed < MAX_COMMANDS_PER_TICK:
             try:
-                command, client = self.command_queue.get_nowait()
+                command, client, client_closed, protocol_error = self.command_queue.get_nowait()
             except queue.Empty:
                 break
 
+            if client_closed.is_set():
+                continue
+
             try:
-                response = self.execute_command(command)
+                if protocol_error:
+                    response = {"status": "error", "message": protocol_error}
+                else:
+                    response = self.execute_command(command)
                 payload = _encode_message(response)
             except Exception as e:
                 traceback.print_exc()
@@ -194,6 +269,7 @@ class BlenderMCPServer:
                 client.sendall(payload)
             except Exception:
                 print("PlygonMCP: failed to send response (client gone)")
+            processed += 1
 
         return 0.05
 
@@ -202,6 +278,7 @@ class BlenderMCPServer:
         with self._clients_lock:
             self._clients.add(client)
         buffer = b""
+        client_closed = threading.Event()
 
         try:
             while self.running:
@@ -210,18 +287,47 @@ class BlenderMCPServer:
                     if not data:
                         break
                     buffer += data
+                    if len(buffer) > MAX_BUFFER_BYTES:
+                        print(
+                            f"PlygonMCP: closing client with more than "
+                            f"{MAX_BUFFER_BYTES} buffered bytes"
+                        )
+                        break
                     commands, buffer = _extract_json_objects(buffer)
                     for command in commands:
-                        if not isinstance(command, dict):
-                            continue
-                        print(f"PlygonMCP: queued {command.get('type')}")
-                        self.command_queue.put((command, client))
+                        if command is _MALFORMED_JSON:
+                            item = (
+                                None,
+                                client,
+                                client_closed,
+                                "Malformed newline-delimited JSON command",
+                            )
+                        elif not isinstance(command, dict):
+                            item = (
+                                None,
+                                client,
+                                client_closed,
+                                "Command must be a JSON object",
+                            )
+                        else:
+                            print(f"PlygonMCP: queued {command.get('type')}")
+                            item = (command, client, client_closed, None)
+                        try:
+                            self.command_queue.put_nowait(item)
+                        except queue.Full:
+                            print(
+                                f"PlygonMCP: closing client because {MAX_PENDING_COMMANDS} "
+                                "commands are already pending"
+                            )
+                            client_closed.set()
+                            return
                 except socket.timeout:
                     continue
                 except Exception as e:
                     print(f"PlygonMCP: recv error: {e}")
                     break
         finally:
+            client_closed.set()
             with self._clients_lock:
                 self._clients.discard(client)
             try:
@@ -401,21 +507,21 @@ class BlenderMCPServer:
         return info
 
     def get_viewport_screenshot(self, max_size: int = 1000, filepath: str = "", format: str = "png"):
+        max_size = int(max_size)
+        if max_size < 2:
+            raise ValueError("max_size must be at least 2 pixels")
         if not filepath:
             filepath = os.path.join(
-                tempfile.gettempdir(), f"plygon_mcp_viewport_{os.getpid()}.png"
+                tempfile.gettempdir(),
+                f"plygon_mcp_viewport_{os.getpid()}_{uuid.uuid4().hex}.png",
             )
 
-        area = region = space = None
-        for a in bpy.context.screen.areas:
-            if a.type == "VIEW_3D":
-                area = a
-                space = a.spaces.active
-                region = next((r for r in a.regions if r.type == "WINDOW"), None)
-                break
-
-        if not area or region is None or space is None:
-            return {"error": "No 3D viewport found"}
+        view3d_context = _find_view3d_context()
+        if view3d_context is None:
+            raise ValueError("No 3D viewport found. Keep a 3D Viewport visible.")
+        area = view3d_context["area"]
+        region = view3d_context["region"]
+        space = area.spaces.active
 
         method = "offscreen"
         width = height = 0
@@ -425,6 +531,8 @@ class BlenderMCPServer:
 
             r3d = space.region_3d
             src_w, src_h = region.width, region.height
+            if src_w < 1 or src_h < 1:
+                raise ValueError("The 3D Viewport has no drawable pixel area")
             if max(src_w, src_h) > max_size:
                 s = max_size / max(src_w, src_h)
                 width, height = max(1, int(src_w * s)), max(1, int(src_h * s))
@@ -434,8 +542,8 @@ class BlenderMCPServer:
             offscreen = gpu.types.GPUOffScreen(width, height)
             try:
                 offscreen.draw_view3d(
-                    bpy.context.scene,
-                    bpy.context.view_layer,
+                    view3d_context["scene"],
+                    view3d_context["view_layer"],
                     space,
                     region,
                     r3d.view_matrix,
@@ -450,25 +558,34 @@ class BlenderMCPServer:
             pixels = np.asarray(buf, dtype=np.float32) / 255.0
 
             image = bpy.data.images.new("plygon_mcp_viewport", width, height, alpha=True)
-            image.pixels.foreach_set(pixels.ravel())
-            image.filepath_raw = filepath
-            image.file_format = format.upper()
-            image.save()
-            bpy.data.images.remove(image)
+            try:
+                image.pixels.foreach_set(pixels.ravel())
+                image.filepath_raw = filepath
+                image.file_format = format.upper()
+                image.save()
+            finally:
+                bpy.data.images.remove(image)
         except Exception as offscreen_err:
             print(f"PlygonMCP: offscreen capture failed ({offscreen_err}); using window grab")
             method = "window_grab"
-            with bpy.context.temp_override(area=area):
-                bpy.ops.screen.screenshot_area(filepath=filepath)
+            _run_operator(
+                bpy.ops.screen.screenshot_area,
+                view3d_context=view3d_context,
+                filepath=filepath,
+            )
             img = bpy.data.images.load(filepath)
-            width, height = img.size
-            if max(width, height) > max_size:
-                s = max_size / max(width, height)
-                width, height = int(width * s), int(height * s)
-                img.scale(width, height)
-                img.file_format = format.upper()
-                img.save()
-            bpy.data.images.remove(img)
+            try:
+                width, height = img.size
+                if width < 1 or height < 1:
+                    raise ValueError("Blender captured an empty screenshot")
+                if max(width, height) > max_size:
+                    s = max_size / max(width, height)
+                    width, height = max(1, int(width * s)), max(1, int(height * s))
+                    img.scale(width, height)
+                    img.file_format = format.upper()
+                    img.save()
+            finally:
+                bpy.data.images.remove(img)
 
         return {
             "success": True,
@@ -529,8 +646,13 @@ class BlenderMCPServer:
             kwargs["major_radius"] = size / 2.0
             kwargs["minor_radius"] = size / 8.0
 
-        op(**kwargs)
-        obj = bpy.context.active_object
+        view3d_context = _find_view3d_context()
+        _ensure_object_mode(view3d_context)
+        _run_operator(op, view3d_context=view3d_context, **kwargs)
+        view_layer = view3d_context.get("view_layer") if view3d_context else bpy.context.view_layer
+        obj = view_layer.objects.active
+        if obj is None:
+            raise RuntimeError(f"Blender created no active object for {shape}")
         if name:
             obj.name = name
             if obj.data:
@@ -581,9 +703,14 @@ class BlenderMCPServer:
             raise ValueError(f"Object not found: {object_name}")
 
         mat_name = material_name or f"{object_name}_Material"
-        mat = bpy.data.materials.get(mat_name) if not create_new else None
-        if mat is None:
+        if create_new:
             mat = bpy.data.materials.new(name=mat_name)
+        else:
+            mat = bpy.data.materials.get(mat_name)
+            if mat is None:
+                raise ValueError(
+                    f"Material not found: {mat_name}. Set create_new=true to create it."
+                )
         mat.use_nodes = True
         nodes = mat.node_tree.nodes
         bsdf = nodes.get("Principled BSDF")
@@ -611,36 +738,75 @@ class BlenderMCPServer:
     def select_objects(self, names=None, mode: str = "REPLACE"):
         names = names or []
         mode = mode.upper()
+        if mode not in {"REPLACE", "ADD"}:
+            raise ValueError("mode must be REPLACE or ADD")
+        view3d_context = _find_view3d_context()
+        _ensure_object_mode(view3d_context)
         if mode == "REPLACE":
-            bpy.ops.object.select_all(action="DESELECT")
+            _run_operator(
+                bpy.ops.object.select_all,
+                view3d_context=view3d_context,
+                action="DESELECT",
+            )
 
         selected = []
+        not_found = []
+        view_layer = view3d_context.get("view_layer") if view3d_context else bpy.context.view_layer
         for name in names:
             obj = bpy.data.objects.get(name)
             if not obj:
+                not_found.append(name)
                 continue
             obj.select_set(True)
             selected.append(name)
-            bpy.context.view_layer.objects.active = obj
+            view_layer.objects.active = obj
 
-        return {"selected": selected, "active": bpy.context.view_layer.objects.active.name if bpy.context.view_layer.objects.active else None}
+        return {
+            "selected": selected,
+            "not_found": not_found,
+            "active": view_layer.objects.active.name
+            if view_layer.objects.active
+            else None,
+        }
 
     def export_scene(self, filepath: str, format: str = "GLB"):
         format = format.upper()
         os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+        view3d_context = _find_view3d_context()
 
         if format in {"GLB", "GLTF"}:
             export_format = "GLB" if format == "GLB" else "GLTF_SEPARATE"
-            bpy.ops.export_scene.gltf(filepath=filepath, export_format=export_format)
+            _run_operator(
+                bpy.ops.export_scene.gltf,
+                view3d_context=view3d_context,
+                filepath=filepath,
+                export_format=export_format,
+            )
         elif format == "FBX":
-            bpy.ops.export_scene.fbx(filepath=filepath)
+            _run_operator(
+                bpy.ops.export_scene.fbx,
+                view3d_context=view3d_context,
+                filepath=filepath,
+            )
         elif format == "OBJ":
             if hasattr(bpy.ops.wm, "obj_export"):
-                bpy.ops.wm.obj_export(filepath=filepath)
+                _run_operator(
+                    bpy.ops.wm.obj_export,
+                    view3d_context=view3d_context,
+                    filepath=filepath,
+                )
             else:
-                bpy.ops.export_scene.obj(filepath=filepath)
+                _run_operator(
+                    bpy.ops.export_scene.obj,
+                    view3d_context=view3d_context,
+                    filepath=filepath,
+                )
         elif format == "BLEND":
-            bpy.ops.wm.save_as_mainfile(filepath=filepath)
+            _run_operator(
+                bpy.ops.wm.save_as_mainfile,
+                view3d_context=view3d_context,
+                filepath=filepath,
+            )
         else:
             raise ValueError(f"Unsupported export format: {format}")
 
@@ -658,11 +824,20 @@ class PLYGONMCP_OT_StartServer(bpy.types.Operator):
         global _server
         scene = context.scene
         if _server and _server.running:
+            scene.plygonmcp_server_running = True
             self.report({"INFO"}, "MCP server already running")
             return {"FINISHED"}
 
         _server = BlenderMCPServer(host="127.0.0.1", port=scene.plygonmcp_port)
-        _server.start()
+        if not _server.start():
+            _server = None
+            scene.plygonmcp_server_running = False
+            self.report(
+                {"ERROR"},
+                f"Could not start PlygonMCP on port {scene.plygonmcp_port}. "
+                "Check the system console; the port may already be in use.",
+            )
+            return {"CANCELLED"}
         scene.plygonmcp_server_running = True
         self.report({"INFO"}, f"PlygonMCP listening on port {scene.plygonmcp_port}")
         return {"FINISHED"}
@@ -694,13 +869,16 @@ class PLYGONMCP_PT_Panel(bpy.types.Panel):
         scene = context.scene
 
         layout.label(text="Local Cursor bridge", icon="LINKED")
-        layout.prop(scene, "plygonmcp_port")
+        running = bool(_server and _server.running)
+        port_row = layout.row()
+        port_row.enabled = not running
+        port_row.prop(scene, "plygonmcp_port")
 
-        if not scene.plygonmcp_server_running:
+        if not running:
             layout.operator("plygonmcp.start_server", text="Start MCP Server", icon="PLAY")
         else:
             layout.operator("plygonmcp.stop_server", text="Stop MCP Server", icon="PAUSE")
-            layout.label(text=f"Online · port {scene.plygonmcp_port}", icon="CHECKMARK")
+            layout.label(text=f"Online · port {_server.port}", icon="CHECKMARK")
 
         box = layout.box()
         box.label(text="Setup")
@@ -728,7 +906,10 @@ def register():
         min=1024,
         max=65535,
     )
-    bpy.types.Scene.plygonmcp_server_running = BoolProperty(default=False)
+    bpy.types.Scene.plygonmcp_server_running = BoolProperty(
+        default=False,
+        options={"SKIP_SAVE"},
+    )
     bpy.types.Scene.plygonmcp_host = StringProperty(default="127.0.0.1")
 
 

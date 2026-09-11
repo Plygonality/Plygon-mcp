@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 import tempfile
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional
@@ -97,25 +98,29 @@ def get_object_info(object_name: str) -> str:
 def get_viewport_screenshot(max_size: int = 1000) -> Image:
     """Capture the current 3D viewport and return it as an image for visual review."""
     blender = get_blender_connection()
-    temp_path = os.path.join(tempfile.gettempdir(), f"plygon_mcp_{os.getpid()}.png")
-    result = blender.send_command(
-        "get_viewport_screenshot",
-        {"max_size": max_size, "filepath": temp_path, "format": "png"},
+    temp_path = os.path.join(
+        tempfile.gettempdir(), f"plygon_mcp_{os.getpid()}_{uuid.uuid4().hex}.png"
     )
-    if isinstance(result, dict) and result.get("error"):
-        raise RuntimeError(result["error"])
-
-    path = result.get("filepath", temp_path) if isinstance(result, dict) else temp_path
-    if not os.path.exists(path):
-        raise RuntimeError("Screenshot file was not created")
-
-    with open(path, "rb") as f:
-        image_bytes = f.read()
     try:
-        os.remove(path)
-    except OSError:
-        pass
-    return Image(data=image_bytes, format="png")
+        result = blender.send_command(
+            "get_viewport_screenshot",
+            {"max_size": max_size, "filepath": temp_path, "format": "png"},
+        )
+        if isinstance(result, dict) and result.get("error"):
+            raise RuntimeError(result["error"])
+
+        path = result.get("filepath", temp_path) if isinstance(result, dict) else temp_path
+        if not os.path.exists(path):
+            raise RuntimeError("Screenshot file was not created")
+
+        with open(path, "rb") as f:
+            image_bytes = f.read()
+        return Image(data=image_bytes, format="png")
+    finally:
+        try:
+            os.remove(temp_path)
+        except OSError:
+            pass
 
 
 @mcp.tool()
