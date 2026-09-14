@@ -1,5 +1,7 @@
 #Requires -Version 5.1
 $ErrorActionPreference = "Stop"
+# If PowerShell refuses to load this file ("running scripts is disabled"),
+# run scripts\install-blender.cmd instead — cmd.exe is not blocked.
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $Installer = Join-Path $RepoRoot "blender-mcp\scripts\install_addon.py"
 if (-not (Test-Path $Installer)) {

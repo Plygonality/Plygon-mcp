@@ -6,4 +6,4 @@ Do not create a second alias for either bridge: differently named entries can la
 
 Green here still only means the stdio process started. Blender and Houdini must be listening in the GUI.
 
-For the complete installation and verification sequence, follow the root [click-by-click guide](../README.md#install-both-mcps--exact-click-by-click-guide).
+For the complete installation and verification sequence, follow the root [click-by-click guide](../README.md#install-both-mcps--exact-click-by-click-guide). On Windows that guide uses `.cmd` installers (PowerShell may block `.ps1`), tells you to skip uv reinstall when `uvx --version` already works, and treats a Houdini Console error about `.cursor/houdini-mcp` / `fxhoudinimcp` as a different MCP.

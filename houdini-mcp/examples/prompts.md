@@ -64,4 +64,4 @@ If that returns JSON, follow with:
 
 ## Troubleshooting prompt
 
-> ping_houdini failed. Classify spawn vs connection-refused vs timeout. Check: Python Shell `from plygon_houdini_mcp import listener` then `listener.start_server(port=9877)`, port 9877 (not 8100), packages/plygon_houdini_mcp.json exists, local Agent not Cloud, Houdini not frozen. Do not change my hip.
+> ping_houdini failed. Classify spawn vs connection-refused vs timeout. Check: Python Shell `from plygon_houdini_mcp import listener` then `listener.start_server(port=9877)`, port 9877 (not 8100), packages/plygon_houdini_mcp.json exists, local Agent not Cloud, Houdini not frozen. A Console error about fxhoudinimcp or .cursor/houdini-mcp is a different MCP — Close it. Do not change my hip.

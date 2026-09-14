@@ -62,7 +62,7 @@ Or hit **Fork** — this repo is MIT on purpose.
 4. In the 3D Viewport press **N** → **PlygonMCP** tab → **Start MCP Server**.
 5. Confirm **Online · port 9876**. Leave Blender open.
 
-Script alternative: [`scripts/install-blender.ps1`](../scripts/install-blender.ps1) on Windows, or this from the repo on macOS/Linux:
+Script alternative: [`scripts/install-blender.cmd`](../scripts/install-blender.cmd) on Windows (use this when PowerShell blocks `.ps1` files), or this from the repo on macOS/Linux:
 
 ```bash
 "$HOME/.local/bin/uv" run --no-project python blender-mcp/scripts/install_addon.py
@@ -74,7 +74,9 @@ The script detects fresh Blender version folders even when `scripts/addons` does
 
 Cursor does **not** use Settings → MCP. Use **Customize → MCPs**.
 
-**Install uv first (one time).** Windows PowerShell:
+**Install uv first (one time).** On Windows, first check `& "$env:USERPROFILE\.local\bin\uvx.exe" --version`. If it prints a version, skip the download. Cursor often locks `uv.exe` ("being used by another process") — quit Cursor from the tray, or skip reinstall when the version check already works.
+
+Windows PowerShell — paste **one command at a time**, never `cd` plus this line:
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
@@ -211,7 +213,8 @@ Prefer the structured tools for simple edits. Use `execute_blender_code` in smal
 | [`src/plygon_blender_mcp/`](src/plygon_blender_mcp/) | MCP server Cursor launches |
 | [`configs/`](configs/) | Cursor MCP JSON (GitHub / local / Windows / pip) |
 | [`scripts/install_addon.py`](scripts/install_addon.py) | Copies the add-on into Blender |
-| [`../scripts/install-blender.ps1`](../scripts/install-blender.ps1) | Windows installer (any cwd) |
+| [`../scripts/install-blender.cmd`](../scripts/install-blender.cmd) | Windows installer (works when `.ps1` is blocked) |
+| [`../scripts/install-blender.ps1`](../scripts/install-blender.ps1) | Windows PowerShell installer (any cwd) |
 | [`examples/prompts.md`](examples/prompts.md) | Prompts that make the demo hit |
 
 ---
@@ -262,12 +265,14 @@ uv run python scripts/smoke_test.py --live   # Blender must be listening
 | Symptom | Fix |
 |---------|-----|
 | `spawn uvx ENOENT` / `'uvx' is not recognized` | Install [uv](https://docs.astral.sh/uv/getting-started/installation/), use `%USERPROFILE%\\.local\\bin\\uvx.exe` on Windows, fully quit Cursor (tray icon too) |
+| uv installer: `uv.exe` is being used by another process | Quit Cursor from the tray, or skip reinstall if `uvx.exe --version` already works |
+| `running scripts is disabled` / cannot load `.ps1` | Use `.\scripts\install-blender.cmd` |
 | MCP list empties after Ctrl+S | `mcp.json` is invalid JSON. Don’t paste `{ ...leave existing... }` placeholders. Add `plygon-blender` next to `plygon-houdini` |
 | `Extra data: line 1 column 51` | Reinstall add-on 1.0.3+ and restart the MCP server (concatenated JSON from parallel tools) |
 | Start fails / port already in use | Stop the other listener on 9876. The panel now stays offline instead of falsely showing Online |
 | Green MCP, `Could not connect` | Add-on enabled? **Start MCP Server**? Panel says **Online · 9876**? Green is not enough |
 | Timeouts | Keep Blender in the foreground; smaller code chunks. Do not ping from a Cloud Agent |
-| Add-on missing | Restart Blender; search Preferences for “Plygon”; or run `scripts/install-blender.ps1` |
+| Add-on missing | Restart Blender; search Preferences for “Plygon”; or run `scripts/install-blender.cmd` |
 | Black screenshots | Keep a 3D Viewport visible |
 | Stale server after a git update | `uv cache clean` then fully quit Cursor |
 | User config seems ignored in this clone | Same-name project fields take precedence. Test the user config from a different local project |

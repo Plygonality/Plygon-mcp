@@ -1,5 +1,7 @@
 #Requires -Version 5.1
 $ErrorActionPreference = "Stop"
+# If PowerShell refuses to load this file ("running scripts is disabled"),
+# run scripts\install-houdini.cmd instead — cmd.exe is not blocked.
 # Resolve the repo even if you run this from C:\Users\you (do not cd first).
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $Installer = Join-Path $RepoRoot "houdini-mcp\scripts\install_package.py"
