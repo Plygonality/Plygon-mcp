@@ -17,7 +17,7 @@
 
 - Teach the Windows Houdini install path from a real first-run: `.cmd` wrappers when PowerShell blocks `.ps1` files, skip uv reinstall when `uvx --version` already works, overlay OneDrive-locked package folders, and keep going if only one of two prefs dirs succeeds.
 - Document the leftover `fxhoudinimcp` / `.cursor/houdini-mcp` Houdini Console error as a different MCP (close it; Plygon is port 9877).
-- Add a real Cursor + Houdini chess-set screenshot and the prompts that built it to the Houdini install guides.
+- Add a real Cursor + Houdini chess-set screenshot and the prompts that built it to the Houdini install guides, including the root README hero image.
 - Add one combined Cursor MCP config for each operating-system family.
 - Standardize server names on `plygon-blender` and `plygon-houdini`.
 - Add a complete click-by-click installation and verification guide for both DCCs.

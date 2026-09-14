@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="blender-mcp/assets/banner.svg" alt="Plygon — local MCP bridges for Blender and Houdini" width="100%">
+  <img src="houdini-mcp/assets/chess-set-example.png" alt="Cursor Agent and Houdini after building a procedural chess set" width="100%">
 </p>
 
 <p align="center">
