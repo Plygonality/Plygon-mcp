@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/chess-set-example.png" alt="Cursor Agent and Houdini after building a procedural chess set" width="100%">
+</p>
+
 <p align="center"><strong>Cursor talks. Houdini builds. The DCC bridge stays local by default.</strong></p>
 
 <p align="center">
