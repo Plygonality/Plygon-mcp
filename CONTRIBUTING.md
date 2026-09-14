@@ -12,6 +12,10 @@ Plygon is a public MIT workshop. Forks are expected.
 
 Installers must find `Documents\houdini21.0` and `OneDrive\Documenten\houdini21.0`, not `Documents\houdini\21.0`. Houdini only loads `packages/*.json` at the top level — always write `packages/plygon_houdini_mcp.json` next to the copied folder.
 
+OneDrive may lock `rmtree` with Access is denied. Overlay-copy in that case, and do not abort a multi-folder install if another prefs folder already succeeded. Windows docs should use `scripts/install-houdini.cmd` so PowerShell execution policy cannot block the first run. Check `uvx --version` before reinstalling uv: Cursor often locks `uv.exe`. Treat a Houdini Console error about `.cursor/houdini-mcp` / `fxhoudinimcp` / `help_menu` as a different MCP (port 8100), not Plygon (9877).
+
+Paste one command per line. Never concatenate `cd` with the next installer.
+
 ## Listener threading
 
 `hou.ui.addEventLoopCallback` already runs on the UI thread. Never wait on `hdefereval.executeInMainThreadWithResult` from that callback: Houdini freezes after `queued ping` and Cursor times out.
@@ -31,6 +35,6 @@ cd ../houdini-mcp && uv sync --extra dev --locked && uv run pytest -q
 
 Mocked tests must cover DCC-side framing and handlers that can run without Blender/Houdini. Use each `scripts/smoke_test.py --live` before release when the GUI applications are available. Keep both lockfiles current with their corresponding `pyproject.toml`.
 
-Installer tests must include fresh Blender profiles, Windows Houdini preference paths, macOS `~/Library/Preferences/houdini/<version>`, and Linux `~/houdini<version>`. User-facing install commands should use uv's managed Python rather than assuming `python` or `python3` is globally installed.
+Installer tests must include fresh Blender profiles, Windows Houdini preference paths, macOS `~/Library/Preferences/houdini/<version>`, and Linux `~/houdini<version>`. Cover OneDrive `rmtree` denial (overlay copy) and a dual prefs install where one folder is locked. User-facing Windows install commands should be `.cmd` wrappers plus uv's managed Python rather than assuming `python` is globally installed or that `.ps1` files can run.
 
 Open a PR if your change would help another tech artist on the first clone.

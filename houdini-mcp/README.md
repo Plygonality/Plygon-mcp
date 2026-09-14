@@ -45,21 +45,28 @@ Installing both DCCs? Use the canonical [click-by-click Blender + Houdini guide]
 
 ```bash
 git clone https://github.com/Plygonality/Plygon-mcp.git
-cd Plygon-mcp
 ```
+
+Wait for the clone to finish, then `cd Plygon-mcp`. Press Enter after each command. Never paste `cd` and the next installer on the same line.
 
 Or hit **Fork** — this repo is MIT on purpose.
 
-`uvx` in Cursor's `mcp.json` does **not** install this package. A `.cursor\houdini-mcp` folder is not the repo. Run the installer from this clone (the script finds its own files, so a full path works from any directory).
+`uvx` in Cursor's `mcp.json` does **not** install this package. A `.cursor\houdini-mcp` folder is not the repo. A Houdini Console error about that folder, `fxhoudinimcp`, or `help_menu` is a different MCP — click **Close**. Run the installer from this clone (the script finds its own files, so a full path works from any directory).
 
-Install uv first if Step 1 of the [canonical guide](../README.md#step-1--install-uv-once) has not been completed. The installer uses uv's managed Python; a separate global `python` command is not required.
+Install uv first if Step 1 of the [canonical guide](../README.md#step-1--install-uv-once) has not been completed. On Windows, check `& "$env:USERPROFILE\.local\bin\uvx.exe" --version` before rerunning the Astral installer; Cursor often locks `uv.exe`. The installer uses uv's managed Python; a separate global `python` command is not required.
 
 ### 1. Install the Houdini package
 
-**Windows:**
+**Windows** (this `.cmd` file works when PowerShell blocks `.ps1` scripts):
 
 ```powershell
-.\scripts\install-houdini.ps1
+.\scripts\install-houdini.cmd
+```
+
+Fallback if the `.cmd` is missing:
+
+```powershell
+& "$env:USERPROFILE\.local\bin\uv.exe" run --no-project python houdini-mcp\scripts\install_package.py
 ```
 
 The installer looks for `Documents\houdini21.0` **and** `OneDrive\Documenten\houdini21.0` (Dutch OneDrive). That is `houdini21.0` as the folder name, not `Documents\houdini\21.0`.
@@ -67,9 +74,9 @@ The installer looks for `Documents\houdini21.0` **and** `OneDrive\Documenten\hou
 If it cannot find prefs, open Houdini once, quit, then:
 
 ```powershell
-.\scripts\install-houdini.ps1 --list
-.\scripts\install-houdini.ps1 --pref-dir "$env:USERPROFILE\Documents\houdini21.0"
-.\scripts\install-houdini.ps1 --pref-dir "$env:USERPROFILE\OneDrive\Documenten\houdini21.0"
+.\scripts\install-houdini.cmd --list
+.\scripts\install-houdini.cmd --pref-dir "$env:USERPROFILE\Documents\houdini21.0"
+.\scripts\install-houdini.cmd --pref-dir "$env:USERPROFILE\OneDrive\Documenten\houdini21.0"
 ```
 
 **macOS / Linux:**
@@ -85,9 +92,11 @@ You should see both:
 - `Installed package → …\packages\plygon_houdini_mcp`
 - `Wrote Houdini packages JSON → …\packages\plygon_houdini_mcp.json`
 
+If `Documents\houdini21.0` succeeds and `OneDrive\Documenten` prints Access is denied, continue. Houdini only needs one working prefs folder. The installer overlays locked OneDrive copies instead of aborting the whole run. Fully quit Houdini before installing; pause OneDrive if the overlay still fails.
+
 Houdini only loads JSON files sitting **directly** in `packages/`. See [`package/README.md`](package/README.md). Without the wrapper, the Python Shell raises `No module named 'plygon_houdini_mcp'`.
 
-**Fully quit Houdini and reopen it.**
+**Fully quit Houdini and reopen it.** If a Console mentions `.cursor/houdini-mcp`, `fxhoudinimcp`, or `help_menu`, click **Close**.
 
 ### 2. Start the listener
 
@@ -161,9 +170,26 @@ Local Agent chat (not Cloud):
 
 > Ping Houdini with ping_houdini, then call get_scene_info. Do not change the hip.
 
-Then:
+Then a terrain smoke test:
 
 > Create a geo with a grid and a mountain SOP. Layout the network, cook it, and screenshot the viewport when it looks like terrain.
+
+After ping works, the same local Agent can build a set like this:
+
+<p align="center">
+  <img src="assets/chess-set-example.png" alt="Cursor Agent and Houdini after building a procedural chess set: pawn, bishop, rook, and a checkerboard with a chamfered border" width="100%">
+</p>
+
+**Chess pieces**
+
+> Create a simple Pawn piece for your chess set using Revolve.
+> Then try to make the Bishop and Rook.
+>
+> Tip: you don’t have to use Revolve for everything, you can build it up from different shapes, using what you learned already (last week for instance).
+
+**Chess board**
+
+> Create a simple procedural chess board where the user can change the number of sides in x and z direction. For the simple board, you always have an uneven amount of tiles per side (1,3, 5..). Every square is slightly extruded and beveled upwards so the divisions are clear. They change colors between black and white. Around the board is also an additional brown border, slightly thicker and chamfered, to indicate the end of the board. Bonus: A real chessboard has an even number of tiles(8x8). Try to find a solution that solves for an even number of rows and columns.
 
 More copy-paste prompts: [`examples/prompts.md`](examples/prompts.md)
 
@@ -197,8 +223,10 @@ Prefer structured tools for simple edits. Use `execute_houdini_code` in small st
 | [`package/plygon_houdini_mcp.json`](package/plygon_houdini_mcp.json) | Inner package manifest |
 | [`src/plygon_houdini_mcp/`](src/plygon_houdini_mcp/) | MCP server Cursor launches |
 | [`configs/`](configs/) | Cursor MCP JSON (GitHub / local / Windows / pip) |
-| [`scripts/install_package.py`](scripts/install_package.py) | Copies package + writes the packages JSON wrapper |
+| [`scripts/install_package.py`](scripts/install_package.py) | Copies package + writes the packages JSON wrapper; overlays OneDrive-locked folders |
+| [`../scripts/install-houdini.cmd`](../scripts/install-houdini.cmd) | Windows installer (works when `.ps1` is blocked) |
 | [`examples/prompts.md`](examples/prompts.md) | Prompts that make the demo hit |
+| [`assets/chess-set-example.png`](assets/chess-set-example.png) | Install-guide example: Cursor + Houdini chess set |
 
 ---
 
@@ -247,7 +275,11 @@ uv run python scripts/smoke_test.py --live   # Houdini listener must be running
 
 | Symptom | Fix |
 |---------|-----|
-| `can't open file ... install_package.py` | You are not in the clone. `cd` into `Plygon-mcp` or run `scripts/install-houdini.ps1` |
+| `can't open file ... install_package.py` | You are not in the clone. `cd` into `Plygon-mcp` or run `scripts/install-houdini.cmd` |
+| `running scripts is disabled` / cannot load `.ps1` | Use `.\scripts\install-houdini.cmd` or the `uv.exe run --no-project python houdini-mcp\scripts\install_package.py` line. One command per line |
+| uv installer: `uv.exe` is being used by another process | Quit Cursor from the tray, or skip reinstall if `uvx.exe --version` already works |
+| `Access is denied` under `OneDrive\Documenten\...plygon_houdini_mcp` | Quit Houdini, pause OneDrive, rerun. Overlay is enough. One successful prefs folder is enough |
+| Houdini Console: `fxhoudinimcp` / `.cursor/houdini-mcp` / `help_menu` | Click Close. Different MCP. Plygon is 9877, not 8100 |
 | `Could not find a Houdini preferences folder` | Open Houdini once, then `--pref-dir` to `Documents\houdini21.0` or `OneDrive\Documenten\houdini21.0` |
 | `No module named 'plygon_houdini_mcp'` | Wrapper JSON missing. Re-run the installer; restart Houdini |
 | `spawn uvx ENOENT` / `'uvx' is not recognized` | Use `%USERPROFILE%\\.local\\bin\\uvx.exe`; fully quit Cursor |

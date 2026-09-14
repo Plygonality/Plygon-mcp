@@ -95,8 +95,9 @@ def test_install_writes_packages_wrapper_json(tmp_path):
     inst = _load_install_package()
     package_src = ROOT / "package"
     pref = tmp_path / "houdini21.0"
-    dest_root, wrapper = inst.install_package(pref, package_src)
+    dest_root, wrapper, mode = inst.install_package(pref, package_src)
 
+    assert mode == "copied"
     assert dest_root.is_dir()
     assert (dest_root / "scripts" / "python" / "plygon_houdini_mcp" / "listener.py").is_file()
     assert wrapper.is_file()
@@ -105,6 +106,100 @@ def test_install_writes_packages_wrapper_json(tmp_path):
     path_val = data["env"][0]["HOUDINI_PATH"]
     assert "plygon_houdini_mcp" in path_val
     assert path_val.startswith("$HOUDINI_PACKAGE_PATH/")
+
+
+def test_windows_detects_documents_and_onedrive_documenten(tmp_path, monkeypatch):
+    inst = _load_install_package()
+    docs = tmp_path / "Documents" / "houdini21.0"
+    onedrive = tmp_path / "OneDrive" / "Documenten" / "houdini21.0"
+    docs.mkdir(parents=True)
+    onedrive.mkdir(parents=True)
+    monkeypatch.setattr(inst.platform, "system", lambda: "Windows")
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.delenv("OneDrive", raising=False)
+    monkeypatch.delenv("HOUDINI_USER_PREF_DIR", raising=False)
+    monkeypatch.delenv("HOUDINIMCP_PREF_DIR", raising=False)
+
+    found = {p.resolve() for p in inst.candidate_pref_dirs()}
+    assert docs.resolve() in found
+    assert onedrive.resolve() in found
+
+
+def test_install_overlays_when_rmtree_denied(tmp_path, monkeypatch):
+    inst = _load_install_package()
+    pref = tmp_path / "houdini21.0"
+    dest = pref / "packages" / "plygon_houdini_mcp"
+    dest.mkdir(parents=True)
+    (dest / "stale.txt").write_text("keep", encoding="utf-8")
+
+    def deny(path, *args, **kwargs):
+        raise PermissionError(5, "Access is denied", str(path))
+
+    monkeypatch.setattr(inst.shutil, "rmtree", deny)
+    dest_root, wrapper, mode = inst.install_package(pref, ROOT / "package")
+
+    assert mode == "overlaid"
+    assert (dest_root / "scripts" / "python" / "plygon_houdini_mcp" / "listener.py").is_file()
+    assert (dest_root / "stale.txt").read_text(encoding="utf-8") == "keep"
+    assert wrapper.is_file()
+
+
+def test_main_succeeds_when_one_of_two_prefs_is_locked(tmp_path, monkeypatch, capsys):
+    inst = _load_install_package()
+    docs = tmp_path / "Documents" / "houdini21.0"
+    locked = tmp_path / "OneDrive" / "Documenten" / "houdini21.0"
+    docs.mkdir(parents=True)
+    locked.mkdir(parents=True)
+    real = inst.install_package
+
+    def flaky(pref_dir, package_src):
+        if "OneDrive" in pref_dir.parts:
+            raise PermissionError(
+                5,
+                "Access is denied",
+                str(pref_dir / "packages" / "plygon_houdini_mcp"),
+            )
+        return real(pref_dir, package_src)
+
+    monkeypatch.setattr(inst, "install_package", flaky)
+    monkeypatch.setattr(inst, "candidate_pref_dirs", lambda: [docs, locked])
+    monkeypatch.setattr(inst.sys, "argv", ["install_package.py"])
+    monkeypatch.delenv("HOUDINI_USER_PREF_DIR", raising=False)
+    monkeypatch.delenv("HOUDINIMCP_PREF_DIR", raising=False)
+
+    assert inst.main() == 0
+    captured = capsys.readouterr()
+    assert "Installed package" in captured.out
+    assert "Could not install" in captured.err
+    assert "fxhoudinimcp" in captured.err
+    assert (docs / "packages" / "plygon_houdini_mcp.json").is_file()
+    assert not (locked / "packages" / "plygon_houdini_mcp.json").exists()
+
+
+def test_main_fails_when_every_pref_is_locked(tmp_path, monkeypatch, capsys):
+    inst = _load_install_package()
+    pref = tmp_path / "houdini21.0"
+    pref.mkdir()
+
+    def boom(pref_dir, package_src):
+        raise PermissionError(5, "Access is denied", str(pref_dir))
+
+    monkeypatch.setattr(inst, "install_package", boom)
+    monkeypatch.setattr(inst, "candidate_pref_dirs", lambda: [pref])
+    monkeypatch.setattr(inst.sys, "argv", ["install_package.py"])
+    monkeypatch.delenv("HOUDINI_USER_PREF_DIR", raising=False)
+    monkeypatch.delenv("HOUDINIMCP_PREF_DIR", raising=False)
+
+    assert inst.main() == 1
+    assert "No Houdini prefs folder accepted" in capsys.readouterr().err
+
+
+def test_windows_cmd_wrapper_invokes_python_installer():
+    cmd = ROOT.parent / "scripts" / "install-houdini.cmd"
+    text = cmd.read_text(encoding="utf-8")
+    assert "install_package.py" in text
+    assert "execution policy" in text.lower()
+    assert "uv.exe" in text
 
 
 def test_refused_message_mentions_python_shell():

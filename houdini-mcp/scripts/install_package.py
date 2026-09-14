@@ -8,8 +8,12 @@ directory:
   uv run python C:\\Users\\you\\Documents\\Plygon-mcp\\houdini-mcp\\scripts\\install_package.py
   uv run python scripts/install_package.py --pref-dir "C:\\Users\\you\\Documents\\houdini21.0"
 
-On Windows, Houdini stores prefs in Documents\\houdini21.0 (not Documents\\houdini\\21.0).
-Dutch / OneDrive machines often use OneDrive\\Documenten\\houdini21.0 instead.
+Windows: prefer scripts/install-houdini.cmd so PowerShell execution policy cannot
+block the first run. Documents\\houdini21.0 and OneDrive\\Documenten\\houdini21.0
+can both exist; this installer copies into each and keeps going if OneDrive locks
+rmtree (Access is denied). Overlay-copy in that case. Houdini only needs one
+working prefs folder.
+
 Houdini only loads JSON files sitting directly in the packages folder, so this
 installer writes packages/plygon_houdini_mcp.json next to the copied package.
 """
@@ -148,17 +152,47 @@ def write_package_wrapper(packages_dir: Path) -> Path:
     return wrapper
 
 
-def install_package(pref_dir: Path, package_src: Path) -> tuple[Path, Path]:
+def _writable(path: Path) -> None:
+    try:
+        path.chmod(path.stat().st_mode | 0o200)
+    except OSError:
+        pass
+
+
+def overlay_copy(src: Path, dest: Path) -> None:
+    """Copy src onto dest without deleting dest first (OneDrive/Houdini file locks)."""
+    dest.mkdir(parents=True, exist_ok=True)
+    _writable(dest)
+    for item in src.iterdir():
+        target = dest / item.name
+        if item.is_dir():
+            overlay_copy(item, target)
+            continue
+        if target.exists():
+            _writable(target)
+        shutil.copy2(item, target)
+
+
+def replace_or_overlay(src: Path, dest: Path) -> str:
+    """Replace dest with src. If rmtree is denied, overlay files and return 'overlaid'."""
+    if dest.exists():
+        try:
+            shutil.rmtree(dest)
+        except OSError:
+            overlay_copy(src, dest)
+            return "overlaid"
+    shutil.copytree(src, dest)
+    return "copied"
+
+
+def install_package(pref_dir: Path, package_src: Path) -> tuple[Path, Path, str]:
     packages_dir = pref_dir / "packages"
     packages_dir.mkdir(parents=True, exist_ok=True)
 
     dest_root = packages_dir / PACKAGE_DIR_NAME
-    if dest_root.exists():
-        shutil.rmtree(dest_root)
-
-    shutil.copytree(package_src, dest_root)
+    mode = replace_or_overlay(package_src, dest_root)
     wrapper = write_package_wrapper(packages_dir)
-    return dest_root, wrapper
+    return dest_root, wrapper, mode
 
 
 def _missing_pref_help() -> str:
@@ -166,6 +200,7 @@ def _missing_pref_help() -> str:
         "Could not find a Houdini preferences folder (houdini21.0, houdini20.5, …).\n"
         "Open Houdini once so it creates that folder, then rerun — or pass --pref-dir.\n\n"
         "Windows examples:\n"
+        '  .\\scripts\\install-houdini.cmd --pref-dir "%USERPROFILE%\\Documents\\houdini21.0"\n'
         '  uv run python houdini-mcp/scripts/install_package.py --pref-dir "%USERPROFILE%\\Documents\\houdini21.0"\n'
         '  uv run python houdini-mcp/scripts/install_package.py --pref-dir "%USERPROFILE%\\OneDrive\\Documenten\\houdini21.0"\n\n'
         "macOS example:\n"
@@ -175,11 +210,27 @@ def _missing_pref_help() -> str:
     )
 
 
+def _lock_help(pref_dir: Path) -> str:
+    locked = pref_dir / "packages" / PACKAGE_DIR_NAME
+    return (
+        "Houdini or OneDrive still has files open in that folder.\n"
+        "  1. Fully quit Houdini (Task Manager → End task on houdini/houdinifx).\n"
+        "  2. Pause OneDrive syncing for 2 hours.\n"
+        f"  3. Delete {locked}\n"
+        "  4. Rerun this installer.\n"
+        "If another prefs folder already printed Installed package, try the "
+        "Python Shell import anyway — Houdini only needs one working folder.\n"
+        "A Houdini Console error about .cursor/houdini-mcp, fxhoudinimcp, or "
+        "help_menu is a different MCP. Click Close. Plygon is port 9877."
+    )
+
+
 def _next_steps(dest_root: Path) -> str:
     shelf = dest_root / "toolbar" / "plygon_houdini_mcp.shelf"
     return (
         "Next:\n"
         "  1. Fully quit Houdini and reopen it (so the packages JSON loads).\n"
+        "     If a Console mentions fxhoudinimcp or .cursor/houdini-mcp, click Close.\n"
         f"  2. Optional shelf: right-click a shelf → Shelves → Import →\n     {shelf}\n"
         "  3. Start the listener in Windows → Python Shell:\n"
         "       from plygon_houdini_mcp import listener\n"
@@ -240,12 +291,39 @@ def main() -> int:
         targets = detected
 
     installed: list[Path] = []
+    failed: list[Path] = []
     for target in unique_dirs(targets):
-        target.mkdir(parents=True, exist_ok=True)
-        dest_root, wrapper = install_package(target, package_src)
-        print(f"Installed package → {dest_root}")
+        try:
+            target.mkdir(parents=True, exist_ok=True)
+            dest_root, wrapper, mode = install_package(target, package_src)
+        except OSError as exc:
+            print(f"Could not install into {target}: {exc}", file=sys.stderr)
+            print(_lock_help(target), file=sys.stderr)
+            failed.append(target)
+            continue
+        label = (
+            "Installed package →"
+            if mode == "copied"
+            else "Installed package (overlay onto locked folder) →"
+        )
+        print(f"{label} {dest_root}")
         print(f"Wrote Houdini packages JSON → {wrapper}")
         installed.append(dest_root)
+
+    if not installed:
+        print("No Houdini prefs folder accepted the package.", file=sys.stderr)
+        return 1
+    if failed:
+        print(
+            f"\nInstalled into {len(installed)} folder(s); "
+            f"skipped {len(failed)} locked folder(s).",
+            file=sys.stderr,
+        )
+        print(
+            "Houdini only needs one working prefs folder. If Python Shell can "
+            "import plygon_houdini_mcp, you are done.",
+            file=sys.stderr,
+        )
 
     print()
     print(_next_steps(installed[0]))

@@ -53,6 +53,14 @@ def test_fresh_blender_profile_does_not_need_existing_addons_dir(tmp_path, monke
     assert not expected.exists()
 
 
+def test_windows_cmd_wrapper_invokes_python_installer():
+    cmd = ROOT.parent / "scripts" / "install-blender.cmd"
+    text = cmd.read_text(encoding="utf-8")
+    assert "install_addon.py" in text
+    assert "execution policy" in text.lower()
+    assert "uv.exe" in text
+
+
 def test_refused_message_mentions_n_panel():
     from plygon_blender_mcp.connection import REFUSED_MESSAGE, TIMEOUT_MESSAGE
 
