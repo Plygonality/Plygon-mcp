@@ -170,9 +170,26 @@ Local Agent chat (not Cloud):
 
 > Ping Houdini with ping_houdini, then call get_scene_info. Do not change the hip.
 
-Then:
+Then a terrain smoke test:
 
 > Create a geo with a grid and a mountain SOP. Layout the network, cook it, and screenshot the viewport when it looks like terrain.
+
+After ping works, the same local Agent can build a set like this:
+
+<p align="center">
+  <img src="assets/chess-set-example.png" alt="Cursor Agent and Houdini after building a procedural chess set: pawn, bishop, rook, and a checkerboard with a chamfered border" width="100%">
+</p>
+
+**Chess pieces**
+
+> Create a simple Pawn piece for your chess set using Revolve.
+> Then try to make the Bishop and Rook.
+>
+> Tip: you don’t have to use Revolve for everything, you can build it up from different shapes, using what you learned already (last week for instance).
+
+**Chess board**
+
+> Create a simple procedural chess board where the user can change the number of sides in x and z direction. For the simple board, you always have an uneven amount of tiles per side (1,3, 5..). Every square is slightly extruded and beveled upwards so the divisions are clear. They change colors between black and white. Around the board is also an additional brown border, slightly thicker and chamfered, to indicate the end of the board. Bonus: A real chessboard has an even number of tiles(8x8). Try to find a solution that solves for an even number of rows and columns.
 
 More copy-paste prompts: [`examples/prompts.md`](examples/prompts.md)
 
@@ -209,6 +226,7 @@ Prefer structured tools for simple edits. Use `execute_houdini_code` in small st
 | [`scripts/install_package.py`](scripts/install_package.py) | Copies package + writes the packages JSON wrapper; overlays OneDrive-locked folders |
 | [`../scripts/install-houdini.cmd`](../scripts/install-houdini.cmd) | Windows installer (works when `.ps1` is blocked) |
 | [`examples/prompts.md`](examples/prompts.md) | Prompts that make the demo hit |
+| [`assets/chess-set-example.png`](assets/chess-set-example.png) | Install-guide example: Cursor + Houdini chess set |
 
 ---
 

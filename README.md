@@ -385,6 +385,27 @@ A Cloud Agent cannot reach `127.0.0.1` on your PC. These checks must run in a lo
 
 Copy-paste task prompts: [Blender](blender-mcp/examples/prompts.md) · [Houdini](houdini-mcp/examples/prompts.md)
 
+### Example — Houdini chess set
+
+Once Houdini ping returns `pong`, a local Agent can build a scene like this:
+
+<p align="center">
+  <img src="houdini-mcp/assets/chess-set-example.png" alt="Cursor Agent and Houdini after building a procedural chess set: pawn, bishop, rook, and a checkerboard with a chamfered border" width="100%">
+</p>
+
+Paste these into a **local** Agent chat (not Cloud). Full copies live in [`houdini-mcp/examples/prompts.md`](houdini-mcp/examples/prompts.md).
+
+**Chess pieces**
+
+> Create a simple Pawn piece for your chess set using Revolve.
+> Then try to make the Bishop and Rook.
+>
+> Tip: you don’t have to use Revolve for everything, you can build it up from different shapes, using what you learned already (last week for instance).
+
+**Chess board**
+
+> Create a simple procedural chess board where the user can change the number of sides in x and z direction. For the simple board, you always have an uneven amount of tiles per side (1,3, 5..). Every square is slightly extruded and beveled upwards so the divisions are clear. They change colors between black and white. Around the board is also an additional brown border, slightly thicker and chamfered, to indicate the end of the board. Bonus: A real chessboard has an even number of tiles(8x8). Try to find a solution that solves for an even number of rows and columns.
+
 ---
 
 ## Diagnose: spawn vs socket vs listener
@@ -462,6 +483,7 @@ You keep the taste. The agent keeps the clicks.
 |------|------|
 | [`blender-mcp/`](blender-mcp/) | Blender add-on + MCP server |
 | [`houdini-mcp/`](houdini-mcp/) | Houdini package + MCP server |
+| [`houdini-mcp/assets/chess-set-example.png`](houdini-mcp/assets/chess-set-example.png) | Install-guide example: Cursor + Houdini chess set |
 | [`houdini-mcp/package/README.md`](houdini-mcp/package/README.md) | Why the packages JSON wrapper exists |
 | [`scripts/install-houdini.cmd`](scripts/install-houdini.cmd) | Windows installer (works when `.ps1` is blocked) |
 | [`scripts/install-blender.cmd`](scripts/install-blender.cmd) | Windows installer (works when `.ps1` is blocked) |
