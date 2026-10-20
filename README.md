@@ -453,11 +453,11 @@ The DCC-side add-on/package is copied into Blender/Houdini. A Git update alone d
 
 ## Privacy and security boundary
 
-- The bridge itself has no telemetry. DCC TCP traffic binds to `127.0.0.1` by default.
+- The bridge itself has no telemetry. DCC TCP traffic binds to `127.0.0.1`. Ports `9876` (Blender) and `9877` (Houdini) are unauthenticated by design and must stay on loopback. Do not forward them, bind them on a LAN address, or expose them to the internet.
+- `execute_blender_code`, `execute_houdini_code`, and `execute_hscript` are full local code execution for any process that can open a TCP connection to the matching port. They run with the same file and network permissions as Blender or Houdini.
+- Browser `fetch` to those ports is rejected. The listener closes the connection when the first bytes are an HTTP request line, so a webpage cannot deliver an `execute_code` body. Other local programs that speak newline-delimited JSON still can.
 - Cursor can send prompts and tool results to your configured model provider. A screenshot returned to the agent is not guaranteed to remain on your PC.
-- `execute_blender_code`, `execute_houdini_code`, and `execute_hscript` run with the same file and network permissions as Blender or Houdini.
-- Any local process that can connect to ports `9876` or `9877` can call the listener; the TCP protocol has no authentication.
-- Save your `.blend` or `.hip`, review tool approvals, and never expose these ports to a LAN or the internet.
+- Save your `.blend` or `.hip` and review tool approvals.
 
 ---
 

@@ -2,8 +2,16 @@
 
 ## Unreleased
 
+### Security
+
+- Reject an HTTP request line on the first chunk of a Blender (`127.0.0.1:9876`) or Houdini (`127.0.0.1:9877`) bridge connection. A browser `fetch` can no longer smuggle `execute_code` through the JSON framer. MCP clients send bare newline-delimited JSON and are unchanged. The ports stay unauthenticated for other local processes and must remain on loopback.
+- The Houdini change is only that request-line guard. Tool names, input schemas, the port, and Cursor config keys are unchanged.
+
 ### Reliability
 
+- Apply Blender `create_primitive` scale on the object after the operator returns. `TORUS` no longer crashes on the missing `scale` property, and every shape leaves `object.scale` equal to the argument instead of baking it into the mesh.
+- When the active Blender workspace has no 3D Viewport, temporarily turn the largest editor into a 3D Viewport, capture `get_viewport_screenshot`, and restore the editor. Assigning `window.workspace` does not update the screen inside the listener's timer tick, so the workspace is left alone.
+- Truncate Blender `execute_code` stdout to 256 KiB and append `…[truncated N bytes]` so a huge `print` stays under the 4 MiB frame limit. The client buffer limit is unchanged.
 - Fix Houdini Scene Viewer screenshots by using the supported one-frame flipbook API.
 - Honor Houdini `create_primitive.parent_path`, validate before mutation, and apply `size` to every supported primitive.
 - Support Houdini tuple parameters such as `t: [1, 2, 3]`.

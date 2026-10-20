@@ -184,3 +184,387 @@ def test_viewport_screenshot_rejects_too_small_max_size(monkeypatch):
 
     with pytest.raises(ValueError, match="at least 2"):
         addon.BlenderMCPServer().get_viewport_screenshot(max_size=1)
+
+
+class FakeClient:
+    def __init__(self, chunks):
+        self._chunks = list(chunks)
+        self.closed = False
+        self.sent = []
+        self.timeout = None
+
+    def settimeout(self, value):
+        self.timeout = value
+
+    def recv(self, _size):
+        if not self._chunks:
+            return b""
+        return self._chunks.pop(0)
+
+    def sendall(self, data):
+        self.sent.append(data)
+
+    def close(self):
+        self.closed = True
+
+
+def _http_request(method: str, body: dict) -> bytes:
+    payload = json.dumps(body).encode("utf-8")
+    head = (
+        f"{method} / HTTP/1.1\r\n"
+        "Host: 127.0.0.1:9876\r\n"
+        "Content-Type: application/json\r\n"
+        f"Content-Length: {len(payload)}\r\n"
+        "\r\n"
+    ).encode("utf-8")
+    return head + payload
+
+
+def test_framer_extracts_execute_code_hidden_in_http_body(monkeypatch):
+    """The JSON framer is lenient; the handler must reject HTTP before it runs."""
+    addon, _bpy = load_addon(monkeypatch)
+    attack = {"type": "execute_code", "params": {"code": "print('MARKER')"}}
+
+    commands, leftover = addon._extract_json_objects(_http_request("POST", attack))
+
+    assert attack in commands
+    assert leftover == b""
+
+
+@pytest.mark.parametrize(
+    "method",
+    ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH", "CONNECT", "TRACE"],
+)
+def test_http_request_is_rejected_before_execute_code(monkeypatch, method, capsys):
+    addon, _bpy = load_addon(monkeypatch)
+    attack = {"type": "execute_code", "params": {"code": "print('MARKER')"}}
+    server = addon.BlenderMCPServer()
+    server.running = True
+    client = FakeClient([b"  " + _http_request(method, attack)])
+
+    server._handle_client(client)
+
+    captured = capsys.readouterr()
+    assert server.command_queue.empty()
+    assert client.sent == []
+    assert client.closed is True
+    assert "rejected HTTP request" in captured.out
+    assert "MARKER" not in captured.out
+
+
+def test_json_command_is_still_queued_after_http_guard(monkeypatch):
+    addon, _bpy = load_addon(monkeypatch)
+    ping = {"type": "ping", "params": {}}
+    server = addon.BlenderMCPServer()
+    server.running = True
+    raw = json.dumps(ping).encode("utf-8") + b"\n"
+    client = FakeClient([raw[:1], raw[1:]])
+
+    server._handle_client(client)
+
+    command, _client, _closed, protocol_error = server.command_queue.get_nowait()
+    assert command == ping
+    assert protocol_error is None
+    assert server.command_queue.empty()
+
+
+def test_json_containing_http_words_is_not_rejected(monkeypatch):
+    addon, _bpy = load_addon(monkeypatch)
+    command = {
+        "type": "execute_code",
+        "params": {"code": "print('POST / HTTP/1.1')"},
+    }
+    server = addon.BlenderMCPServer()
+    server.running = True
+    client = FakeClient([json.dumps(command).encode("utf-8") + b"\n"])
+
+    server._handle_client(client)
+
+    queued, *_rest = server.command_queue.get_nowait()
+    assert queued == command
+
+
+def test_execute_code_truncates_large_stdout(monkeypatch):
+    addon, _bpy = load_addon(monkeypatch)
+    extra = 1234
+    huge = addon.BlenderMCPServer().execute_code(
+        f"print('x' * {addon.MAX_EXECUTE_STDOUT_BYTES + extra}, end='')"
+    )
+    small = addon.BlenderMCPServer().execute_code("print('ok')")
+    silent = addon.BlenderMCPServer().execute_code("value = 1")
+
+    assert huge["executed"] is True
+    assert huge["result"].endswith(f"\n…[truncated {extra} bytes]")
+    assert huge["result"].count("x") == addon.MAX_EXECUTE_STDOUT_BYTES
+    assert small == {"executed": True, "result": "ok\n"}
+    assert silent == {"executed": True, "result": ""}
+
+    from plygon_blender_mcp.connection import MAX_BUFFER_BYTES as client_limit
+
+    payload = addon._encode_message({"status": "success", "result": huge})
+    assert len(payload) < addon.MAX_BUFFER_BYTES
+    assert len(payload) < client_limit
+    assert addon.MAX_EXECUTE_STDOUT_BYTES == 256 * 1024
+
+
+def test_truncate_stdout_keeps_utf8_boundary(monkeypatch):
+    addon, _bpy = load_addon(monkeypatch)
+    text = "€" * 10
+
+    truncated = addon._truncate_stdout(text, limit=4)
+
+    assert truncated.startswith("€")
+    assert truncated.endswith("\n…[truncated 27 bytes]")
+
+
+MESH_OPERATORS = (
+    "primitive_cube_add",
+    "primitive_uv_sphere_add",
+    "primitive_cylinder_add",
+    "primitive_cone_add",
+    "primitive_torus_add",
+    "primitive_plane_add",
+    "primitive_monkey_add",
+    "primitive_ico_sphere_add",
+)
+
+SHAPE_OPERATOR = {
+    "CUBE": "primitive_cube_add",
+    "SPHERE": "primitive_uv_sphere_add",
+    "CYLINDER": "primitive_cylinder_add",
+    "CONE": "primitive_cone_add",
+    "TORUS": "primitive_torus_add",
+    "PLANE": "primitive_plane_add",
+    "MONKEY": "primitive_monkey_add",
+    "ICO_SPHERE": "primitive_ico_sphere_add",
+}
+
+EXPECTED_SIZE_KWARGS = {
+    "CUBE": {"size": 2.0},
+    "PLANE": {"size": 2.0},
+    "MONKEY": {"size": 2.0},
+    "SPHERE": {"radius": 1.0},
+    "ICO_SPHERE": {"radius": 1.0},
+    "CYLINDER": {"radius": 1.0, "depth": 2.0},
+    "CONE": {"radius1": 1.0, "depth": 2.0},
+    "TORUS": {"major_radius": 1.0, "minor_radius": 0.25},
+}
+
+
+class _ScaleVector(tuple):
+    def __new__(cls, value):
+        return tuple.__new__(cls, tuple(value))
+
+
+def _install_mesh_ops(bpy):
+    calls = {name: [] for name in MESH_OPERATORS}
+
+    def make(name):
+        def operator(**kwargs):
+            calls[name].append(kwargs)
+            return {"FINISHED"}
+
+        return operator
+
+    bpy.ops.mesh = types.SimpleNamespace(**{name: make(name) for name in MESH_OPERATORS})
+    return calls
+
+
+def _active_object(bpy, name="Mesh"):
+    obj = types.SimpleNamespace(
+        name=name,
+        type="MESH",
+        data=types.SimpleNamespace(name=name),
+        scale=(1.0, 1.0, 1.0),
+    )
+    bpy.context.view_layer = types.SimpleNamespace(objects=types.SimpleNamespace(active=obj))
+    return obj
+
+
+@pytest.mark.parametrize("shape", list(SHAPE_OPERATOR))
+def test_create_primitive_scale_is_object_scale_for_every_shape(monkeypatch, shape):
+    addon, bpy = load_addon(monkeypatch)
+    addon.mathutils.Vector = _ScaleVector
+    calls = _install_mesh_ops(bpy)
+    obj = _active_object(bpy, name=shape.title())
+    location = [0, 3, 0.5] if shape == "TORUS" else [0, 0, 0]
+    name = "Ring" if shape == "TORUS" else ""
+
+    result = addon.BlenderMCPServer().create_primitive(
+        shape=shape,
+        name=name,
+        location=location,
+        scale=[2, 1, 1],
+    )
+
+    kwargs = calls[SHAPE_OPERATOR[shape]][0]
+    assert "scale" not in kwargs
+    assert set(kwargs) == {"location", "rotation", *EXPECTED_SIZE_KWARGS[shape]}
+    assert kwargs["location"] == tuple(location)
+    assert kwargs["rotation"] == (0.0, 0.0, 0.0)
+    for key, value in EXPECTED_SIZE_KWARGS[shape].items():
+        assert kwargs[key] == value
+    assert obj.scale == (2, 1, 1)
+    assert result["shape"] == shape
+    assert result["type"] == "MESH"
+    if shape == "TORUS":
+        assert result["name"] == "Ring"
+        assert obj.name == "Ring"
+        assert obj.data.name == "Ring"
+
+
+def test_create_primitive_switches_to_object_mode_before_add(monkeypatch):
+    addon, bpy = load_addon(monkeypatch)
+    log = []
+    bpy.context.mode = "EDIT"
+
+    def mode_set(**kwargs):
+        log.append(("mode", kwargs.get("mode"), bpy.context.mode))
+        bpy.context.mode = kwargs["mode"]
+
+    def cube_add(**kwargs):
+        log.append(("add", bpy.context.mode, "scale" not in kwargs))
+
+    bpy.ops.object = types.SimpleNamespace(mode_set=mode_set)
+    _install_mesh_ops(bpy)
+    bpy.ops.mesh.primitive_cube_add = cube_add
+    obj = _active_object(bpy, name="EditMesh")
+
+    result = addon.BlenderMCPServer().create_primitive(shape="CUBE", name="Separate")
+
+    assert log == [("mode", "OBJECT", "EDIT"), ("add", "OBJECT", True)]
+    assert bpy.context.mode == "OBJECT"
+    assert result["name"] == "Separate"
+    assert obj.name == "Separate"
+    assert obj is bpy.context.view_layer.objects.active
+
+
+def test_create_primitive_rejects_unknown_shape(monkeypatch):
+    addon, bpy = load_addon(monkeypatch)
+    calls = _install_mesh_ops(bpy)
+
+    with pytest.raises(ValueError, match="Unknown shape"):
+        addon.BlenderMCPServer().create_primitive(shape="NOPE")
+
+    assert all(items == [] for items in calls.values())
+
+
+def _editor_area(area_type, width, height, *, with_window_region=True):
+    regions = []
+    if with_window_region:
+        regions.append(types.SimpleNamespace(type="WINDOW", width=width, height=height))
+    return types.SimpleNamespace(
+        type=area_type,
+        width=width,
+        height=height,
+        regions=regions,
+        spaces=types.SimpleNamespace(active=types.SimpleNamespace()),
+    )
+
+
+def _use_areas(bpy, areas):
+    screen = types.SimpleNamespace(areas=list(areas))
+    workspace = types.SimpleNamespace(name="Current", screens=[screen])
+    window = types.SimpleNamespace(
+        workspace=workspace,
+        screen=screen,
+        scene=types.SimpleNamespace(name="Scene"),
+        view_layer=types.SimpleNamespace(name="ViewLayer"),
+    )
+    bpy.context.window_manager = types.SimpleNamespace(windows=[window])
+    return window
+
+
+def test_screenshot_keeps_visible_view3d(monkeypatch):
+    addon, bpy = load_addon(monkeypatch)
+    view = _editor_area("VIEW_3D", 800, 600)
+    _use_areas(bpy, [view])
+    seen = {}
+
+    def capture(_self, view3d_context, filepath, max_size, image_format):
+        seen["area"] = view3d_context["area"]
+        seen["type_during"] = view.type
+        return {"success": True, "width": 10, "height": 8, "filepath": filepath, "method": "test"}
+
+    monkeypatch.setattr(addon.BlenderMCPServer, "_capture_viewport_to_file", capture)
+
+    result = addon.BlenderMCPServer().get_viewport_screenshot(max_size=64)
+
+    assert result["success"] is True
+    assert seen["area"] is view
+    assert seen["type_during"] == "VIEW_3D"
+    assert view.type == "VIEW_3D"
+
+
+def test_screenshot_borrows_largest_editor_and_restores_it(monkeypatch):
+    addon, bpy = load_addon(monkeypatch)
+    small = _editor_area("PROPERTIES", 40, 40)
+    node_editor = _editor_area("NODE_EDITOR", 900, 500)
+    window = _use_areas(bpy, [small, node_editor])
+    seen = {}
+
+    def capture(_self, view3d_context, filepath, max_size, image_format):
+        seen["area"] = view3d_context["area"]
+        seen["types"] = [area.type for area in window.screen.areas]
+        return {"success": True, "width": 4, "height": 4, "filepath": filepath, "method": "test"}
+
+    monkeypatch.setattr(addon.BlenderMCPServer, "_capture_viewport_to_file", capture)
+
+    result = addon.BlenderMCPServer().get_viewport_screenshot()
+
+    assert result["success"] is True
+    assert seen["area"] is node_editor
+    assert seen["types"] == ["PROPERTIES", "VIEW_3D"]
+    assert [area.type for area in window.screen.areas] == ["PROPERTIES", "NODE_EDITOR"]
+    assert window.workspace.name == "Current"
+
+
+def test_screenshot_restores_editor_when_capture_fails(monkeypatch):
+    addon, bpy = load_addon(monkeypatch)
+    node_editor = _editor_area("NODE_EDITOR", 640, 480)
+    _use_areas(bpy, [node_editor])
+
+    def capture(*_args, **_kwargs):
+        raise RuntimeError("capture failed")
+
+    monkeypatch.setattr(addon.BlenderMCPServer, "_capture_viewport_to_file", capture)
+
+    with pytest.raises(RuntimeError, match="capture failed"):
+        addon.BlenderMCPServer().get_viewport_screenshot()
+
+    assert node_editor.type == "NODE_EDITOR"
+
+
+def test_screenshot_without_any_editor_explains_how_to_recover(monkeypatch):
+    addon, bpy = load_addon(monkeypatch)
+    window = _use_areas(bpy, [])
+
+    with pytest.raises(ValueError, match="Layout") as exc:
+        addon.BlenderMCPServer().get_viewport_screenshot()
+
+    message = str(exc.value)
+    assert "execute_blender_code" in message
+    assert "bpy.data.workspaces['Layout']" in message
+    assert window.screen.areas == []
+
+
+def test_screenshot_restores_editor_when_area_has_no_window_region(monkeypatch):
+    addon, bpy = load_addon(monkeypatch)
+    node_editor = _editor_area("NODE_EDITOR", 640, 480, with_window_region=False)
+    _use_areas(bpy, [node_editor])
+
+    with pytest.raises(ValueError, match="Layout"):
+        addon.BlenderMCPServer().get_viewport_screenshot()
+
+    assert node_editor.type == "NODE_EDITOR"
+
+
+def test_screenshot_size_check_does_not_touch_editors(monkeypatch):
+    addon, bpy = load_addon(monkeypatch)
+    node_editor = _editor_area("NODE_EDITOR", 640, 480)
+    _use_areas(bpy, [node_editor])
+
+    with pytest.raises(ValueError, match="at least 2"):
+        addon.BlenderMCPServer().get_viewport_screenshot(max_size=1)
+
+    assert node_editor.type == "NODE_EDITOR"
