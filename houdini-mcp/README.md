@@ -290,6 +290,7 @@ uv run python scripts/smoke_test.py --live   # Houdini listener must be running
 | Green MCP, `Could not connect` | Listener not started. Python Shell `listener.start_server(port=9877)` |
 | `Request timed out` / Python Shell “not responding” | Force-quit Houdini, reinstall package (listener deadlock is fixed in 0.1.1+), start again |
 | Listener refuses to start in `hython` | Expected: the bridge requires the normal Houdini GUI and now fails fast without it |
+| `Port ... is already in use` | Stop the other listener on 9877, or start on a free port and set `HOUDINI_PORT` to the same value |
 | Other MCP on port 8100 | Not Plygon. Plygon is 9877 |
 | Cloud Agent ping fails | Use a **local** Agent chat |
 | Timeouts on long cooks | Keep Houdini in the foreground; smaller code chunks |

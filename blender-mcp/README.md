@@ -269,7 +269,7 @@ uv run python scripts/smoke_test.py --live   # Blender must be listening
 | `running scripts is disabled` / cannot load `.ps1` | Use `.\scripts\install-blender.cmd` |
 | MCP list empties after Ctrl+S | `mcp.json` is invalid JSON. Don’t paste `{ ...leave existing... }` placeholders. Add `plygon-blender` next to `plygon-houdini` |
 | `Extra data: line 1 column 51` | Reinstall add-on 1.0.3+ and restart the MCP server (concatenated JSON from parallel tools) |
-| Start fails / port already in use | Stop the other listener on 9876. The panel now stays offline instead of falsely showing Online |
+| Start fails / port already in use | Stop the other listener on 9876, or pick one free port in both Blender and `mcp.json`. The panel stays offline and names the busy port |
 | Green MCP, `Could not connect` | Add-on enabled? **Start MCP Server**? Panel says **Online · 9876**? Green is not enough |
 | Timeouts | Keep Blender in the foreground; smaller code chunks. Do not ping from a Cloud Agent |
 | Add-on missing | Restart Blender; search Preferences for “Plygon”; or run `scripts/install-blender.cmd` |

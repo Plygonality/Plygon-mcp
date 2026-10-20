@@ -4,6 +4,7 @@
 
 ### Reliability
 
+- Bind Blender and Houdini listeners exclusively on Windows with `SO_EXCLUSIVEADDRUSE` and without `SO_REUSEADDR`, so a second process cannot share the port. POSIX still sets `SO_REUSEADDR`. A busy port reports that it is already in use.
 - Fix Houdini Scene Viewer screenshots by using the supported one-frame flipbook API.
 - Honor Houdini `create_primitive.parent_path`, validate before mutation, and apply `size` to every supported primitive.
 - Support Houdini tuple parameters such as `t: [1, 2, 3]`.

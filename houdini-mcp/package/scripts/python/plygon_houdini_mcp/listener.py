@@ -7,6 +7,7 @@ PlygonMCP shelf tab → Start MCP Server.
 
 from __future__ import annotations
 
+import errno
 import inspect
 import io
 import json
@@ -14,6 +15,7 @@ import math
 import os
 import queue
 import socket
+import sys
 import tempfile
 import threading
 import time
@@ -79,6 +81,46 @@ def _extract_json_objects(buffer: bytes):
     return objects, text[idx:].encode("utf-8")
 
 
+# Same functions in blender_mcp_addon.py. Each DCC ships its own copy.
+def _configure_listener_socket(sock: socket.socket) -> None:
+    """Apply listen-socket options for an exclusive DCC listener.
+
+    POSIX SO_REUSEADDR lets a restarted listener take a port that is still in
+    TIME_WAIT. Two active listeners still cannot share that port.
+    Windows SO_REUSEADDR allows a second process to bind the same port, so
+    use SO_EXCLUSIVEADDRUSE and leave SO_REUSEADDR unset.
+    """
+    if sys.platform == "win32":
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        return
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+
+def _address_in_use(exc: BaseException) -> bool:
+    """True for POSIX EADDRINUSE and Windows WSAEADDRINUSE (10048)."""
+    if not isinstance(exc, OSError):
+        return False
+    wsa_addr_in_use = 10048
+    if exc.errno in (errno.EADDRINUSE, wsa_addr_in_use):
+        return True
+    return getattr(exc, "winerror", None) in (errno.EADDRINUSE, wsa_addr_in_use)
+
+
+def _port_in_use_message(host: str, port: int) -> str:
+    return (
+        f"Port {port} is already in use on {host}. "
+        "Stop the other listener or choose a free port."
+    )
+
+
+def _report_start_failure(server, exc: BaseException) -> None:
+    if _address_in_use(exc):
+        server.start_failure = _port_in_use_message(server.host, server.port)
+        print(f"PlygonMCP: {server.start_failure}")
+        return
+    print(f"PlygonMCP: failed to start: {exc}")
+
+
 class HoudiniMCPServer:
     """Accept JSON commands over TCP and run them on Houdini's main thread."""
 
@@ -88,6 +130,7 @@ class HoudiniMCPServer:
         self.running = False
         self.socket = None
         self.server_thread = None
+        self.start_failure: str | None = None
         self.command_queue: queue.Queue = queue.Queue(maxsize=MAX_PENDING_COMMANDS)
         self._clients = set()
         self._clients_lock = threading.Lock()
@@ -95,6 +138,7 @@ class HoudiniMCPServer:
     def start(self) -> bool:
         global _event_loop_callback_registered
 
+        self.start_failure = None
         if not hou.isUIAvailable():
             print(
                 "PlygonMCP: cannot start without the Houdini UI. "
@@ -114,7 +158,7 @@ class HoudiniMCPServer:
 
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            _configure_listener_socket(self.socket)
             self.socket.bind((self.host, self.port))
             self.socket.listen(5)
             self.running = True
@@ -128,8 +172,8 @@ class HoudiniMCPServer:
 
             print(f"PlygonMCP: listening on {self.host}:{self.port}")
             return True
-        except Exception as e:
-            print(f"PlygonMCP: failed to start: {e}")
+        except Exception as exc:
+            _report_start_failure(self, exc)
             self.stop()
             return False
 

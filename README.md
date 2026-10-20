@@ -421,7 +421,7 @@ Paste these into a **local** Agent chat (not Cloud). Full copies live in [`houdi
 | Green, **Request timed out** / Houdini “not responding” after `queued ping` | TCP connected; the listener did not reply | Force-quit the DCC, reinstall the package, start the listener again, keep the GUI in front |
 | ImportError: `No module named 'plygon_houdini_mcp'` | Packages JSON not loaded | Re-run `install_package.py`, confirm `packages/plygon_houdini_mcp.json` exists, restart Houdini |
 | Every MCP disappears after save | `mcp.json` is invalid JSON | Undo immediately; fix the missing comma/brace; keep one top-level `mcpServers` object |
-| Blender says the port is already in use | Another listener owns 9876 | Stop the old add-on/server or choose one matching free port in both Blender and `mcp.json` |
+| Blender or Houdini says the port is already in use | Another listener owns 9876 or 9877 | Stop the other listener, or choose one free port and set that same port in the DCC and in `mcp.json` |
 | Screenshot tool fails | Required viewport is not visible | Keep a 3D Viewport open in Blender and a Scene Viewer pane open in Houdini |
 | Works in a local Agent, fails in Cloud Agent | Cloud `127.0.0.1` is not your PC | Use a desktop Agent chat |
 | Something listening on **8100** | A different Houdini MCP | Ignore it for Plygon. Plygon is **9877** |
