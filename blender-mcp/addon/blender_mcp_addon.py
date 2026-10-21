@@ -16,6 +16,7 @@ import json
 import mathutils
 import os
 import queue
+import re
 import socket
 import tempfile
 import threading
@@ -38,11 +39,21 @@ bl_info = {
 ADDON_PROTOCOL_VERSION = 1
 DEFAULT_PORT = 9876
 MAX_BUFFER_BYTES = 4 * 1024 * 1024
+MAX_EXECUTE_STDOUT_BYTES = 256 * 1024
 MAX_PENDING_COMMANDS = 128
 MAX_COMMANDS_PER_TICK = 1
 
 _server = None
 _MALFORMED_JSON = object()
+_HTTP_REQUEST_LINE = re.compile(
+    rb"^\s*(GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH|CONNECT|TRACE) \S+ HTTP/"
+)
+_NO_VIEW3D_MESSAGE = (
+    "No 3D viewport found, and this window has no editor area that can be "
+    "temporarily switched to a 3D Viewport. Open a workspace that contains one, "
+    "such as Layout, then retry get_viewport_screenshot. From execute_blender_code: "
+    "bpy.context.window.workspace = bpy.data.workspaces['Layout']"
+)
 
 
 def _encode_message(obj) -> bytes:
@@ -103,6 +114,97 @@ def _find_view3d_context():
                     "region": region,
                 }
     return None
+
+
+def _truncate_stdout(text: str, limit: int = MAX_EXECUTE_STDOUT_BYTES) -> str:
+    """Keep captured stdout inside the TCP frame limit.
+
+    ``limit`` is a UTF-8 byte budget. When the capture is longer, the result
+    ends with a newline and ``…[truncated N bytes]``, where N is how many
+    bytes were removed.
+    """
+    raw = text.encode("utf-8")
+    if len(raw) <= limit:
+        return text
+    kept = raw[:limit].decode("utf-8", errors="ignore")
+    dropped = len(raw) - len(kept.encode("utf-8"))
+    return f"{kept}\n…[truncated {dropped} bytes]"
+
+
+def _noop() -> None:
+    return None
+
+
+def _iter_windows():
+    window_manager = getattr(bpy.context, "window_manager", None)
+    windows = getattr(window_manager, "windows", None)
+    if windows:
+        return list(windows)
+    window = getattr(bpy.context, "window", None)
+    return [window] if window is not None else []
+
+
+def _largest_area():
+    """Return the biggest editor area in any open window."""
+    best = None
+    best_score = -1
+    for window in _iter_windows():
+        screen = getattr(window, "screen", None)
+        if screen is None:
+            continue
+        for area in getattr(screen, "areas", ()) or ():
+            width = int(getattr(area, "width", 0) or 0)
+            height = int(getattr(area, "height", 0) or 0)
+            score = width * height
+            if score > best_score:
+                best = area
+                best_score = score
+    return best
+
+
+def _restore_area_type(area, previous_type):
+    try:
+        if getattr(area, "type", None) != previous_type:
+            area.type = previous_type
+    except Exception as exc:
+        print(f"PlygonMCP: failed to restore editor type after screenshot: {exc}")
+
+
+def _borrow_view3d_context():
+    """Return ``(view3d_context, restore)`` for a screenshot.
+
+    A visible 3D Viewport is used as-is and ``restore`` is a no-op. Otherwise
+    the largest editor area is temporarily set to ``VIEW_3D`` (this updates
+    inside the current timer tick; assigning ``window.workspace`` does not)
+    and ``restore`` puts the previous editor type back.
+    """
+    current = _find_view3d_context()
+    if current is not None:
+        return current, _noop
+
+    area = _largest_area()
+    if area is None:
+        raise ValueError(_NO_VIEW3D_MESSAGE)
+
+    previous_type = getattr(area, "type", None)
+    try:
+        area.type = "VIEW_3D"
+    except Exception as exc:
+        raise ValueError(
+            "No 3D viewport is visible, and temporarily switching an editor to "
+            f"the 3D Viewport failed ({exc}). Switch to the Layout workspace and "
+            "retry get_viewport_screenshot."
+        ) from exc
+
+    found = _find_view3d_context()
+    if found is None:
+        _restore_area_type(area, previous_type)
+        raise ValueError(_NO_VIEW3D_MESSAGE)
+
+    def restore(area=area, previous_type=previous_type):
+        _restore_area_type(area, previous_type)
+
+    return found, restore
 
 
 def _run_operator(operator, *, view3d_context=None, **kwargs):
@@ -279,6 +381,7 @@ class BlenderMCPServer:
             self._clients.add(client)
         buffer = b""
         client_closed = threading.Event()
+        first_chunk_checked = False
 
         try:
             while self.running:
@@ -287,6 +390,14 @@ class BlenderMCPServer:
                     if not data:
                         break
                     buffer += data
+                    if not first_chunk_checked:
+                        first_chunk_checked = True
+                        # Reject cross-protocol requests (e.g. a browser fetch()
+                        # POSTing to 127.0.0.1:9876). The MCP client always sends a
+                        # bare JSON object, never an HTTP request line.
+                        if _HTTP_REQUEST_LINE.match(buffer):
+                            print("PlygonMCP: rejected HTTP request on the bridge port")
+                            break
                     if len(buffer) > MAX_BUFFER_BYTES:
                         print(
                             f"PlygonMCP: closing client with more than "
@@ -507,6 +618,12 @@ class BlenderMCPServer:
         return info
 
     def get_viewport_screenshot(self, max_size: int = 1000, filepath: str = "", format: str = "png"):
+        """Capture a 3D Viewport, borrowing an editor area when none is visible.
+
+        The window is left untouched when a VIEW_3D is already visible.
+        Compositing, Shading, and Geometry Nodes often have none: the largest
+        editor is temporarily switched to a 3D Viewport, captured, and restored.
+        """
         max_size = int(max_size)
         if max_size < 2:
             raise ValueError("max_size must be at least 2 pixels")
@@ -516,9 +633,13 @@ class BlenderMCPServer:
                 f"plygon_mcp_viewport_{os.getpid()}_{uuid.uuid4().hex}.png",
             )
 
-        view3d_context = _find_view3d_context()
-        if view3d_context is None:
-            raise ValueError("No 3D viewport found. Keep a 3D Viewport visible.")
+        view3d_context, restore_workspace = _borrow_view3d_context()
+        try:
+            return self._capture_viewport_to_file(view3d_context, filepath, max_size, format)
+        finally:
+            restore_workspace()
+
+    def _capture_viewport_to_file(self, view3d_context, filepath, max_size, format):
         area = view3d_context["area"]
         region = view3d_context["region"]
         space = area.spaces.active
@@ -600,7 +721,7 @@ class BlenderMCPServer:
         capture = io.StringIO()
         with redirect_stdout(capture):
             exec(code, namespace)
-        return {"executed": True, "result": capture.getvalue()}
+        return {"executed": True, "result": _truncate_stdout(capture.getvalue())}
 
     def create_primitive(
         self,
@@ -626,10 +747,13 @@ class BlenderMCPServer:
         if not op:
             raise ValueError(f"Unknown shape: {shape}. Use one of {sorted(ops)}")
 
+        # Do not pass ``scale`` to the operator: primitive_torus_add has no
+        # ``scale`` property (TypeError), and the others bake it into the mesh
+        # while leaving object.scale at 1. Apply it to the object afterwards so
+        # it matches set_object_transform on every shape.
         kwargs = {
             "location": tuple(location),
             "rotation": tuple(rotation),
-            "scale": tuple(scale),
         }
         # Blender ops use different size/radius parameter names per primitive.
         if shape in {"CUBE", "PLANE", "MONKEY"}:
@@ -657,6 +781,7 @@ class BlenderMCPServer:
             obj.name = name
             if obj.data:
                 obj.data.name = name
+        obj.scale = mathutils.Vector(scale)
         return {"name": obj.name, "type": obj.type, "shape": shape}
 
     def delete_object(self, name: str):

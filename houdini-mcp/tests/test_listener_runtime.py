@@ -423,3 +423,82 @@ def test_viewport_screenshot_rejects_too_small_max_size(monkeypatch):
 
     with pytest.raises(ValueError, match="at least 2"):
         listener.HoudiniMCPServer().get_viewport_screenshot(max_size=1)
+
+
+class FakeClient:
+    def __init__(self, chunks):
+        self._chunks = list(chunks)
+        self.closed = False
+        self.sent = []
+        self.timeout = None
+
+    def settimeout(self, value):
+        self.timeout = value
+
+    def recv(self, _size):
+        if not self._chunks:
+            return b""
+        return self._chunks.pop(0)
+
+    def sendall(self, data):
+        self.sent.append(data)
+
+    def close(self):
+        self.closed = True
+
+
+def _http_request(method: str, body: dict) -> bytes:
+    payload = json.dumps(body).encode("utf-8")
+    head = (
+        f"{method} / HTTP/1.1\r\n"
+        "Host: 127.0.0.1:9877\r\n"
+        "Content-Type: application/json\r\n"
+        f"Content-Length: {len(payload)}\r\n"
+        "\r\n"
+    ).encode("utf-8")
+    return head + payload
+
+
+def test_framer_extracts_execute_code_hidden_in_http_body(monkeypatch):
+    listener, _hou = load_listener(monkeypatch)
+    attack = {"type": "execute_code", "params": {"code": "print('MARKER')"}}
+
+    commands, leftover = listener._extract_json_objects(_http_request("POST", attack))
+
+    assert attack in commands
+    assert leftover == b""
+
+
+@pytest.mark.parametrize(
+    "method",
+    ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH", "CONNECT", "TRACE"],
+)
+def test_http_request_is_rejected_before_execute_code(monkeypatch, method, capsys):
+    listener, _hou = load_listener(monkeypatch)
+    attack = {"type": "execute_code", "params": {"code": "print('MARKER')"}}
+    server = listener.HoudiniMCPServer()
+    server.running = True
+    client = FakeClient([_http_request(method, attack)])
+
+    server._handle_client(client)
+
+    assert server.command_queue.empty()
+    assert client.sent == []
+    assert client.closed is True
+    assert "rejected HTTP request" in capsys.readouterr().out
+
+
+def test_json_command_is_still_queued_after_http_guard(monkeypatch):
+    listener, _hou = load_listener(monkeypatch)
+    ping = {"type": "ping", "params": {}}
+    server = listener.HoudiniMCPServer()
+    server.running = True
+    raw = json.dumps(ping).encode("utf-8") + b"\n"
+    client = FakeClient([raw[:1], raw[1:]])
+
+    server._handle_client(client)
+
+    command, _client, _closed, protocol_error = server.command_queue.get_nowait()
+    assert command == ping
+    assert protocol_error is None
+    assert server.command_queue.empty()
