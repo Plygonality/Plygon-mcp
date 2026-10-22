@@ -156,6 +156,7 @@ def create_primitive(
 
     shape: CUBE, SPHERE, CYLINDER, CONE, TORUS, PLANE, MONKEY, ICO_SPHERE
 
+    rotation is an XYZ Euler in radians.
     scale is applied to the object (object.scale), matching set_object_transform.
     It is not passed to the mesh operator and is not baked into the mesh.
     """
@@ -185,7 +186,7 @@ def set_object_transform(
     rotation: Optional[List[float]] = None,
     scale: Optional[List[float]] = None,
 ) -> str:
-    """Set location / rotation_euler / scale on an object. Omit fields you don't want to change."""
+    """Set location / rotation_euler / scale on an object. rotation is an XYZ Euler in radians. Omit fields you don't want to change."""
     blender = get_blender_connection()
     params: Dict[str, Any] = {"name": object_name}
     if location is not None:
