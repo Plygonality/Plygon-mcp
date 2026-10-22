@@ -9,6 +9,8 @@
 
 ### Reliability
 
+- Bind Blender and Houdini listeners exclusively on Windows with `SO_EXCLUSIVEADDRUSE` and without `SO_REUSEADDR`, so a second process cannot share the port. POSIX still sets `SO_REUSEADDR`. When Blender's port is busy, the error says another add-on such as Blender Lab's MCP extension may be using it.
+- Unregister the Blender command timer with the same callback object that was registered. A fresh attribute access builds a new bound method, so `is_registered` was always false and `stop()` left the timer running.
 - Apply Blender `create_primitive` scale on the object after the operator returns. `TORUS` no longer crashes on the missing `scale` property, and every shape leaves `object.scale` equal to the argument instead of baking it into the mesh.
 - When the active Blender workspace has no 3D Viewport, temporarily turn the largest editor into a 3D Viewport, capture `get_viewport_screenshot`, and restore the editor. Assigning `window.workspace` does not update the screen inside the listener's timer tick, so the workspace is left alone.
 - Truncate Blender `execute_code` stdout to 256 KiB and append `…[truncated N bytes]` so a huge `print` stays under the 4 MiB frame limit. The client buffer limit is unchanged.

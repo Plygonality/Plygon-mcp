@@ -10,6 +10,7 @@ In the 3D Viewport press N → PlygonMCP tab → Start MCP Server.
 from __future__ import annotations
 
 import bpy
+import errno
 import inspect
 import io
 import json
@@ -18,6 +19,7 @@ import os
 import queue
 import re
 import socket
+import sys
 import tempfile
 import threading
 import time
@@ -92,6 +94,48 @@ def _extract_json_objects(buffer: bytes):
         objects.append(obj)
         idx = end
     return objects, text[idx:].encode("utf-8")
+
+
+# Socket option helpers match plygon_houdini_mcp/listener.py. Each DCC ships
+# its own copy. The port-in-use sentence below is Blender-specific.
+def _configure_listener_socket(sock: socket.socket) -> None:
+    """Apply listen-socket options for an exclusive DCC listener.
+
+    POSIX SO_REUSEADDR lets a restarted listener take a port that is still in
+    TIME_WAIT. Two active listeners still cannot share that port.
+    Windows SO_REUSEADDR allows a second process to bind the same port, so
+    use SO_EXCLUSIVEADDRUSE and leave SO_REUSEADDR unset.
+    """
+    if sys.platform == "win32":
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        return
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+
+def _address_in_use(exc: BaseException) -> bool:
+    """True for POSIX EADDRINUSE and Windows WSAEADDRINUSE (10048)."""
+    if not isinstance(exc, OSError):
+        return False
+    wsa_addr_in_use = 10048
+    if exc.errno in (errno.EADDRINUSE, wsa_addr_in_use):
+        return True
+    return getattr(exc, "winerror", None) in (errno.EADDRINUSE, wsa_addr_in_use)
+
+
+def _port_in_use_message(host: str, port: int) -> str:
+    return (
+        f"Port {port} is already in use on {host}. "
+        "Another add-on may be using it, such as Blender Lab's MCP extension. "
+        "Turn that add-on off, or pick another port and set BLENDER_PORT to the same value."
+    )
+
+
+def _report_start_failure(server, exc: BaseException) -> None:
+    if _address_in_use(exc):
+        server.start_failure = _port_in_use_message(server.host, server.port)
+        print(f"PlygonMCP: {server.start_failure}")
+        return
+    print(f"PlygonMCP: failed to start: {exc}")
 
 
 def _find_view3d_context():
@@ -247,11 +291,16 @@ class BlenderMCPServer:
         self.running = False
         self.socket = None
         self.server_thread = None
+        self.start_failure: str | None = None
         self.command_queue: queue.Queue = queue.Queue(maxsize=MAX_PENDING_COMMANDS)
         self._clients = set()
         self._clients_lock = threading.Lock()
+        # Each attribute access builds a new bound method. The timer API must
+        # see this same object for register, is_registered, and unregister.
+        self._drain_fn = self._drain_command_queue
 
     def start(self) -> bool:
+        self.start_failure = None
         if bpy.app.background:
             print(
                 "PlygonMCP: cannot start in background mode (blender -b). "
@@ -265,7 +314,7 @@ class BlenderMCPServer:
 
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            _configure_listener_socket(self.socket)
             self.socket.bind((self.host, self.port))
             self.socket.listen(5)
             self.running = True
@@ -273,13 +322,13 @@ class BlenderMCPServer:
             self.server_thread = threading.Thread(target=self._server_loop, daemon=True)
             self.server_thread.start()
 
-            if not bpy.app.timers.is_registered(self._drain_command_queue):
-                bpy.app.timers.register(self._drain_command_queue, persistent=True)
+            if not bpy.app.timers.is_registered(self._drain_fn):
+                bpy.app.timers.register(self._drain_fn, persistent=True)
 
             print(f"PlygonMCP: listening on {self.host}:{self.port}")
             return True
-        except Exception as e:
-            print(f"PlygonMCP: failed to start: {e}")
+        except Exception as exc:
+            _report_start_failure(self, exc)
             self.stop()
             return False
 
@@ -287,8 +336,8 @@ class BlenderMCPServer:
         self.running = False
 
         try:
-            if bpy.app.timers.is_registered(self._drain_command_queue):
-                bpy.app.timers.unregister(self._drain_command_queue)
+            if bpy.app.timers.is_registered(self._drain_fn):
+                bpy.app.timers.unregister(self._drain_fn)
         except Exception:
             pass
 
@@ -955,12 +1004,16 @@ class PLYGONMCP_OT_StartServer(bpy.types.Operator):
 
         _server = BlenderMCPServer(host="127.0.0.1", port=scene.plygonmcp_port)
         if not _server.start():
+            failure = getattr(_server, "start_failure", None)
             _server = None
             scene.plygonmcp_server_running = False
             self.report(
                 {"ERROR"},
-                f"Could not start PlygonMCP on port {scene.plygonmcp_port}. "
-                "Check the system console; the port may already be in use.",
+                failure
+                or (
+                    f"Could not start PlygonMCP on port {scene.plygonmcp_port}. "
+                    "Check the system console; the port may already be in use."
+                ),
             )
             return {"CANCELLED"}
         scene.plygonmcp_server_running = True
