@@ -1,10 +1,15 @@
 # SPDX-License-Identifier: MIT
-"""Plygon Blender MCP addon — TCP command bridge for Cursor / MCP clients.
+"""Plygon Blender MCP addon. TCP command bridge for Cursor and other MCP clients.
 
-Install via Edit → Preferences → Add-ons → Install… → select this file,
-then enable "Interface: Plygon Blender MCP".
+Blender 4.2 and newer: Edit > Preferences > Add-ons, then the dropdown arrow
+at the top right, Install from Disk..., and select this file. Enable on Install
+is ticked by default. The row is named "Plygon Blender MCP".
 
-In the 3D Viewport press N → PlygonMCP tab → Start MCP Server.
+Blender 3.0 through 4.1: Edit > Preferences > Add-ons > Install..., select this
+file, then enable "Interface: Plygon Blender MCP".
+
+In the 3D Viewport press N. PlygonMCP is a vertical tab in the sidebar, below
+Item, Tool, and View. Click Start MCP Server.
 """
 
 from __future__ import annotations
