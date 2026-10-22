@@ -86,7 +86,6 @@ _EXCLUSIVE_SENTINEL = 45123
 _SHARED_BIND_HELPERS = (
     "_configure_listener_socket",
     "_address_in_use",
-    "_port_in_use_message",
     "_report_start_failure",
 )
 
@@ -188,6 +187,7 @@ def test_address_in_use_reports_a_clear_message(monkeypatch, capsys, platform_na
     assert server.running is False
     assert server.socket is None
     message = listener._port_in_use_message("127.0.0.1", 9877)
+    assert "Blender Lab" not in message
     assert server.start_failure == message
     assert f"PlygonMCP: {message}" in capsys.readouterr().out
     expected = _EXCLUSIVE_SENTINEL if platform_name == "win32" else socket.SO_REUSEADDR

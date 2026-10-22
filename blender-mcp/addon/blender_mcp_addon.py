@@ -96,7 +96,8 @@ def _extract_json_objects(buffer: bytes):
     return objects, text[idx:].encode("utf-8")
 
 
-# Same functions in plygon_houdini_mcp/listener.py. Each DCC ships its own copy.
+# Socket option helpers match plygon_houdini_mcp/listener.py. Each DCC ships
+# its own copy. The port-in-use sentence below is Blender-specific.
 def _configure_listener_socket(sock: socket.socket) -> None:
     """Apply listen-socket options for an exclusive DCC listener.
 
@@ -124,7 +125,8 @@ def _address_in_use(exc: BaseException) -> bool:
 def _port_in_use_message(host: str, port: int) -> str:
     return (
         f"Port {port} is already in use on {host}. "
-        "Stop the other listener or choose a free port."
+        "Another add-on may be using it, such as Blender Lab's MCP extension. "
+        "Turn that add-on off, or pick another port and set BLENDER_PORT to the same value."
     )
 
 
@@ -293,6 +295,9 @@ class BlenderMCPServer:
         self.command_queue: queue.Queue = queue.Queue(maxsize=MAX_PENDING_COMMANDS)
         self._clients = set()
         self._clients_lock = threading.Lock()
+        # Each attribute access builds a new bound method. The timer API must
+        # see this same object for register, is_registered, and unregister.
+        self._drain_fn = self._drain_command_queue
 
     def start(self) -> bool:
         self.start_failure = None
@@ -317,8 +322,8 @@ class BlenderMCPServer:
             self.server_thread = threading.Thread(target=self._server_loop, daemon=True)
             self.server_thread.start()
 
-            if not bpy.app.timers.is_registered(self._drain_command_queue):
-                bpy.app.timers.register(self._drain_command_queue, persistent=True)
+            if not bpy.app.timers.is_registered(self._drain_fn):
+                bpy.app.timers.register(self._drain_fn, persistent=True)
 
             print(f"PlygonMCP: listening on {self.host}:{self.port}")
             return True
@@ -331,8 +336,8 @@ class BlenderMCPServer:
         self.running = False
 
         try:
-            if bpy.app.timers.is_registered(self._drain_command_queue):
-                bpy.app.timers.unregister(self._drain_command_queue)
+            if bpy.app.timers.is_registered(self._drain_fn):
+                bpy.app.timers.unregister(self._drain_fn)
         except Exception:
             pass
 

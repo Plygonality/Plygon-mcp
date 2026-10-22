@@ -132,7 +132,6 @@ _EXCLUSIVE_SENTINEL = 45123
 _SHARED_BIND_HELPERS = (
     "_configure_listener_socket",
     "_address_in_use",
-    "_port_in_use_message",
     "_report_start_failure",
 )
 
@@ -242,6 +241,8 @@ def test_address_in_use_reports_a_clear_message(monkeypatch, capsys, platform_na
     assert server.running is False
     assert server.socket is None
     message = addon._port_in_use_message("127.0.0.1", 9876)
+    assert "Blender Lab" in message
+    assert "BLENDER_PORT" in message
     assert server.start_failure == message
     assert f"PlygonMCP: {message}" in capsys.readouterr().out
     expected = _EXCLUSIVE_SENTINEL if platform_name == "win32" else socket.SO_REUSEADDR
@@ -283,6 +284,75 @@ def test_real_socket_option_matches_this_platform(monkeypatch):
             assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) == 1
     finally:
         sock.close()
+
+
+class _QuietThread:
+    def __init__(self, target=None, daemon=None):
+        self.target = target
+
+    def start(self):
+        return None
+
+    def is_alive(self):
+        return False
+
+    def join(self, timeout=None):
+        return None
+
+
+class _IdleSocket:
+    def setsockopt(self, *args):
+        return None
+
+    def bind(self, address):
+        return None
+
+    def listen(self, backlog):
+        return None
+
+    def close(self):
+        return None
+
+
+class _IdentityTimers:
+    def __init__(self):
+        self.registered = None
+        self.events = []
+
+    def is_registered(self, callback):
+        self.events.append(("is_registered", callback))
+        return self.registered is callback
+
+    def register(self, callback, **kwargs):
+        self.events.append(("register", callback, kwargs))
+        self.registered = callback
+
+    def unregister(self, callback):
+        self.events.append(("unregister", callback))
+        if self.registered is callback:
+            self.registered = None
+
+
+def test_drain_timer_uses_one_callback_object(monkeypatch):
+    addon, bpy = load_addon(monkeypatch)
+    timers = _IdentityTimers()
+    bpy.app.timers = timers
+    monkeypatch.setattr(addon.socket, "socket", lambda *args, **kwargs: _IdleSocket())
+    monkeypatch.setattr(addon.threading, "Thread", _QuietThread)
+    server = addon.BlenderMCPServer()
+
+    assert server._drain_command_queue is not server._drain_fn
+
+    assert server.start() is True
+    server.stop()
+
+    registered = [event[1] for event in timers.events if event[0] == "register"]
+    checked = [event[1] for event in timers.events if event[0] == "is_registered"]
+    removed = [event[1] for event in timers.events if event[0] == "unregister"]
+    assert registered == [server._drain_fn]
+    assert checked == [server._drain_fn, server._drain_fn]
+    assert removed == [server._drain_fn]
+    assert timers.registered is None
 
 
 def test_start_operator_does_not_show_online_after_failure(monkeypatch):

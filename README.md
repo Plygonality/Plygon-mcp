@@ -370,7 +370,8 @@ Another MCP client that starts a stdio server uses the same `command`, `args`, a
 
 | What you see | What to do |
 |---|---|
-| Blender reports `Could not start PlygonMCP on port 9876` and says the port may already be in use. The panel stays on **Start MCP Server** and does not show **Online**. | Stop the other listener on 9876, or pick one free port and set that same port in the **Port** field and in `BLENDER_PORT`. |
+| Blender reports `Port 9876 is already in use` and says another add-on, such as Blender Lab's MCP extension, may be using it. The panel stays on **Start MCP Server** and does not show **Online**. | Turn that add-on off, or pick another port in the **Port** field and set `BLENDER_PORT` to the same value. |
+| Ping times out while the panel says **Online · port 9876** | Another add-on is likely listening on the same port, most often Blender Lab's MCP extension. Click **Edit > Preferences > Add-ons**, find **MCP** (Blender Lab), stop it and untick **Auto Start** or disable it, then click **Stop MCP Server** and **Start MCP Server**. Or set a different port in the PlygonMCP panel and the same value as `BLENDER_PORT` in `mcp.json`. A single `WinError 10053` right after restarting the Blender server is harmless; ping again. |
 | The tool reports `Could not connect to Blender on 127.0.0.1:9876 (connection refused)`. The MCP row can still be green. | The listener is not running. Enable the add-on, click **Start MCP Server**, and confirm **Online · port 9876**. A green row only means Cursor started `uvx`. Do not launch Blender with `blender -b`. |
 | The MCP row says `'uvx' is not recognized` | On Windows the command must be `cmd` with `/c` and `%USERPROFILE%\.local\bin\uvx.exe`, as in the JSON above. Fully quit Cursor from the tray icon, then reopen it. |
 

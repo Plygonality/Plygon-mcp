@@ -85,7 +85,8 @@ def _extract_json_objects(buffer: bytes):
     return objects, text[idx:].encode("utf-8")
 
 
-# Same functions in blender_mcp_addon.py. Each DCC ships its own copy.
+# Socket option helpers match blender_mcp_addon.py. Each DCC ships its own
+# copy. The port-in-use sentence below stays generic for Houdini.
 def _configure_listener_socket(sock: socket.socket) -> None:
     """Apply listen-socket options for an exclusive DCC listener.
 
