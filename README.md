@@ -135,29 +135,91 @@ Cursor uses `uvx` to download and start both Python MCP clients. `uvx` does not 
 
 Do not use `pip install uv`. The commands above put `uv` and `uvx` in the location used by the supplied Cursor configs.
 
-### Step 2 — Install and start the Blender add-on
+### Step 2. Download and install the Blender MCP
 
-The manual install works on every operating system and does not require a separate Python installation:
+Two programs are involved. The add-on runs inside Blender and listens on `127.0.0.1:9876`. The MCP server is a separate process named `plygon-blender-mcp`. Cursor starts that process with `uvx`. `uvx` does not install the add-on.
 
-1. Open **Blender** normally. Do not use `blender -b`.
-2. Click **Edit** → **Preferences**.
+`bl_info` in the add-on sets `"blender": (3, 0, 0)` and `"version": (1, 0, 3)`. Use Blender 3.0.0 or newer. The add-on version is 1.0.3.
+
+Blender installs this add-on as one file, `blender_mcp_addon.py`. Do not zip it. A legacy add-on with a single `.py` file is installed from that file.
+
+The file on GitHub:
+
+https://github.com/Plygonality/Plygon-mcp/blob/main/blender-mcp/addon/blender_mcp_addon.py
+
+The raw file (Python source, not the GitHub HTML page):
+
+https://raw.githubusercontent.com/Plygonality/Plygon-mcp/main/blender-mcp/addon/blender_mcp_addon.py
+
+#### Download the add-on
+
+If you already cloned or extracted the repo in Step 0, the file is `blender-mcp/addon/blender_mcp_addon.py` inside the repo folder. Skip to "Install the add-on in Blender".
+
+**Code, then Download ZIP**
+
+1. Open [github.com/Plygonality/Plygon-mcp](https://github.com/Plygonality/Plygon-mcp).
+2. Click **Code**.
+3. Click **Download ZIP**.
+4. Open the downloaded ZIP.
+5. Open the folder `Plygon-mcp-main`.
+6. Open `blender-mcp`.
+7. Open `addon`.
+8. Leave `blender_mcp_addon.py` there. That is the file you select in Blender. Do not select the ZIP.
+
+**Raw file, then Save As**
+
+Save the raw URL above. Saving the GitHub blob page stores HTML, and Blender will not load it.
+
+1. Open the [raw file](https://raw.githubusercontent.com/Plygonality/Plygon-mcp/main/blender-mcp/addon/blender_mcp_addon.py).
+2. Click **File**.
+3. Click **Save As**. Some browsers label this **Save Page As**. If there is no File menu, use the browser menu command that saves the page, or press **Ctrl+S** (macOS: **Cmd+S**).
+4. Set the file name to `blender_mcp_addon.py`. If the name ends in `.txt` or `.html`, change it so it ends in `.py`.
+5. Click **Save**.
+
+#### Install the add-on in Blender
+
+Open the normal Blender window. Do not use `blender -b`. The add-on refuses to start in background mode.
+
+**Blender 4.2 and newer.** Install from Disk is under the dropdown arrow at the top right of the Add-ons page. The menu item is **Install from Disk...**. The file browser button is **Install from Disk**. The add-on row is named **Plygon Blender MCP**.
+
+1. Click **Edit**.
+2. Click **Preferences**.
 3. Click **Add-ons**.
-4. Click **Install from Disk…**. In versions that hide it, first open the small menu in the upper-right of the Add-ons page.
-5. Browse to the repo folder.
-6. Open `blender-mcp` → `addon`.
-7. Select `blender_mcp_addon.py`.
+4. Click the dropdown arrow at the top right of the Add-ons page.
+5. Click **Install from Disk...**.
+6. Open the folder that contains `blender_mcp_addon.py`.
+7. Click `blender_mcp_addon.py`.
 8. Click **Install from Disk**.
-9. In the Add-ons search box, type `Plygon`.
-10. Enable the checkbox beside **Interface: Plygon Blender MCP**.
-11. Close Preferences.
-12. Put the mouse pointer over the 3D Viewport and press **N**.
-13. Click the **PlygonMCP** tab on the right side of the viewport.
-14. Leave **Port** at `9876`.
-15. Click **Start MCP Server**.
-16. Confirm the panel says **Online · port 9876**.
-17. Leave this Blender window open.
+9. Click the search field at the top of Add-ons.
+10. Type `Plygon`.
+11. Click the checkbox on the row **Plygon Blender MCP**.
 
-Optional scripted install:
+**Blender 3.0 through 4.1.** The Add-ons page shows **Install...**. The file browser button is **Install Add-on**. The row is named **Interface: Plygon Blender MCP**.
+
+1. Click **Edit**.
+2. Click **Preferences**.
+3. Click **Add-ons**.
+4. Click **Install...**.
+5. Open the folder that contains `blender_mcp_addon.py`.
+6. Click `blender_mcp_addon.py`.
+7. Click **Install Add-on**.
+8. Click the search field.
+9. Type `Plygon`.
+10. Click the checkbox on the row **Interface: Plygon Blender MCP**.
+
+#### Start the listener
+
+The panel is the 3D Viewport sidebar tab **PlygonMCP** (`View3D > Sidebar > PlygonMCP`). The port field is named **Port** and defaults to `9876`.
+
+1. Move the pointer over the 3D Viewport.
+2. Press **N**.
+3. Click the **PlygonMCP** tab.
+4. Confirm **Port** is `9876`.
+5. Click **Start MCP Server**.
+6. Confirm the panel reads **Online · port 9876**.
+7. Leave this Blender window open.
+
+Optional scripted copy, if you have the repo. This only copies the file. You still enable the add-on and click **Start MCP Server**.
 
 - Windows: open PowerShell in the repo folder and run `.\scripts\install-blender.cmd`. If PowerShell says running scripts is disabled, that `.cmd` file is the one to use, not `install-blender.ps1`.
 - macOS/Linux: from the repo folder run:
@@ -166,7 +228,151 @@ Optional scripted install:
   "$HOME/.local/bin/uv" run --no-project python blender-mcp/scripts/install_addon.py
   ```
 
-The installer now creates a missing `scripts/addons` directory for a fresh Blender profile. Restart Blender after using the script.
+The installer creates a missing `scripts/addons` directory for a fresh Blender profile. Restart Blender after the script, then enable the add-on and start the listener with the clicks above.
+
+#### Connect Cursor
+
+The server name in `blender-mcp/pyproject.toml` is `plygon-blender-mcp`. The process reads `BLENDER_HOST` (default `127.0.0.1`) and `BLENDER_PORT` (default `9876`). Those must match the panel.
+
+On Windows the command is the same shape as the working Houdini config: `cmd`, `/c`, and `%USERPROFILE%\.local\bin\uvx.exe`.
+
+Use the Blender-only file when `mcp.json` has no other servers. If `plygon-houdini` is already there, or you will install Houdini in Step 3, do not paste the Blender-only file over it. Paste the combined file instead. Replacing the whole file with the Blender-only block removes Houdini.
+
+Quit Cursor so it sees `uv`. Do only the clicks for your system.
+
+Windows:
+
+1. Right-click the Cursor icon in the system tray.
+2. Click **Quit**.
+
+macOS:
+
+1. Click **Cursor**.
+2. Click **Quit Cursor**.
+
+Linux:
+
+1. Click **File**.
+2. Click **Exit** (or **Quit**).
+
+Then:
+
+1. Open the desktop Cursor app.
+2. Open the local project where you want Blender.
+3. Click **Customize**.
+4. Click **MCPs**.
+5. Click **+ New MCP Server** or **Add a Custom MCP Server**.
+6. Cursor opens `mcp.json` (`C:\Users\<your-name>\.cursor\mcp.json` on Windows, `~/.cursor/mcp.json` on macOS or Linux).
+
+**Windows, Blender only**
+
+```json
+{
+  "mcpServers": {
+    "plygon-blender": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=blender-mcp",
+        "plygon-blender-mcp"
+      ],
+      "env": {
+        "BLENDER_HOST": "127.0.0.1",
+        "BLENDER_PORT": "9876",
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}
+```
+
+**Windows, Houdini and Blender.** The `plygon-houdini` entry is the working Houdini config. `plygon-blender` sits beside it. The same text is in [`configs/cursor.mcp.windows.json`](configs/cursor.mcp.windows.json).
+
+```json
+{
+  "mcpServers": {
+    "plygon-houdini": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=houdini-mcp",
+        "plygon-houdini-mcp"
+      ],
+      "env": {
+        "HOUDINI_HOST": "127.0.0.1",
+        "HOUDINI_PORT": "9877",
+        "PYTHONUTF8": "1"
+      }
+    },
+    "plygon-blender": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=blender-mcp",
+        "plygon-blender-mcp"
+      ],
+      "env": {
+        "BLENDER_HOST": "127.0.0.1",
+        "BLENDER_PORT": "9876",
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}
+```
+
+**macOS or Linux, Blender only.** The combined macOS/Linux file, with the same Houdini entry kept beside Blender, is in Step 4 and in [`configs/cursor.mcp.json`](configs/cursor.mcp.json).
+
+```json
+{
+  "mcpServers": {
+    "plygon-blender": {
+      "command": "${userHome}/.local/bin/uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=blender-mcp",
+        "plygon-blender-mcp"
+      ],
+      "env": {
+        "BLENDER_HOST": "127.0.0.1",
+        "BLENDER_PORT": "9876"
+      }
+    }
+  }
+}
+```
+
+7. If the file is empty, or it only contains `"mcpServers": {}`, replace it with one complete block above. Use Blender only when that is the only DCC. Use the combined block when Houdini is installed too.
+8. If the file already has other servers, keep them. Add `plygon-blender` inside the existing `"mcpServers"` object, with a comma between neighboring properties. Do not add a second `"mcpServers"` object. Do not delete `plygon-houdini`.
+9. Press **Ctrl+S** on Windows or Linux, or **Cmd+S** on macOS.
+10. Click **Customize**.
+11. Click **MCPs**.
+12. Click the toggle on **plygon-blender** so it is on.
+13. Wait until the **plygon-blender** row is green and lists tools.
+
+Another MCP client that starts a stdio server uses the same `command`, `args`, and `env`.
+
+#### Test Blender
+
+1. Confirm the Blender panel still reads **Online · port 9876**.
+2. In the desktop Cursor app, open a new **Agent** chat. Do not use Ask mode or a Cloud Agent.
+3. Paste: `Ping Blender. Do not change the scene and do not call any other tool.`
+4. Approve the tool call if Cursor asks.
+5. Confirm the result contains `"pong": true`.
+
+#### Blender troubleshooting
+
+| What you see | What to do |
+|---|---|
+| Blender reports `Could not start PlygonMCP on port 9876` and says the port may already be in use. The panel stays on **Start MCP Server** and does not show **Online**. | Stop the other listener on 9876, or pick one free port and set that same port in the **Port** field and in `BLENDER_PORT`. |
+| The tool reports `Could not connect to Blender on 127.0.0.1:9876 (connection refused)`. The MCP row can still be green. | The listener is not running. Enable the add-on, click **Start MCP Server**, and confirm **Online · port 9876**. A green row only means Cursor started `uvx`. Do not launch Blender with `blender -b`. |
+| The MCP row says `'uvx' is not recognized` | On Windows the command must be `cmd` with `/c` and `%USERPROFILE%\.local\bin\uvx.exe`, as in the JSON above. Fully quit Cursor from the tray icon, then reopen it. |
 
 ### Step 3 — Install and start the Houdini package
 
@@ -260,6 +466,8 @@ Plygon uses port `9877`. A message about port `8100` belongs to another Houdini 
    - macOS/Linux: `~/.cursor/mcp.json`
 8. If the file is empty or contains only `"mcpServers": {}`, select everything and replace it with the complete block for your operating system below.
 9. If you already have unrelated MCPs, keep them. Add the two `plygon-*` properties inside the existing `"mcpServers"` object and put a comma between every neighboring property. Never paste placeholder text or a second `"mcpServers"` object.
+
+The `plygon-houdini` entry below is the working Windows Houdini config. Keep it. `plygon-blender` uses the same `cmd`, `/c`, and `uvx.exe` shape, with server name `plygon-blender-mcp`, subdirectory `blender-mcp`, `BLENDER_HOST`, and `BLENDER_PORT` set to `9876`. If Houdini is already in the file, add the Blender entry beside it. Do not replace the file with the Blender-only block from Step 2.
 
 **Windows — copy this complete file:**
 
