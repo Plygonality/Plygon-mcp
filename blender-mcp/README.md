@@ -56,10 +56,17 @@ Or hit **Fork** — this repo is MIT on purpose.
 
 ### 1. Drop the add-on into Blender
 
-1. Open **Blender** (the GUI app — not `blender -b`).
-2. Click **Edit → Preferences → Add-ons → Install from Disk…** and choose [`addon/blender_mcp_addon.py`](addon/blender_mcp_addon.py).
-3. Enable **Interface: Plygon Blender MCP** (search “Plygon”).
-4. In the 3D Viewport press **N** → **PlygonMCP** tab → **Start MCP Server**.
+The add-on is the single file [`addon/blender_mcp_addon.py`](addon/blender_mcp_addon.py). Blender installs that `.py` file. Do not zip it. `bl_info` requires Blender 3.0.0 or newer (add-on version 1.0.3).
+
+Click-by-click download, install, Cursor config, and the ping test are in the root guide: [Step 2. Download and install the Blender MCP](../README.md#step-2-download-and-install-the-blender-mcp).
+
+- File: https://github.com/Plygonality/Plygon-mcp/blob/main/blender-mcp/addon/blender_mcp_addon.py
+- Raw file: https://raw.githubusercontent.com/Plygonality/Plygon-mcp/main/blender-mcp/addon/blender_mcp_addon.py
+
+1. Open **Blender** (the GUI app, not `blender -b`).
+2. On Blender 4.2 and newer: **Edit**, **Preferences**, **Add-ons**, the dropdown arrow at the top right, **Install from Disk...**, select `blender_mcp_addon.py`, then **Install from Disk**. On Blender 3.0 through 4.1: **Install...**, select the same file, then **Install Add-on**.
+3. Search for `Plygon` and enable the checkbox. On Blender 4.2 and newer the row is **Plygon Blender MCP**. On Blender 3.0 through 4.1 it is **Interface: Plygon Blender MCP**.
+4. In the 3D Viewport press **N**, open the **PlygonMCP** tab, and click **Start MCP Server**.
 5. Confirm **Online · port 9876**. Leave Blender open.
 
 Script alternative: [`scripts/install-blender.cmd`](../scripts/install-blender.cmd) on Windows (use this when PowerShell blocks `.ps1` files), or this from the repo on macOS/Linux:
