@@ -56,10 +56,17 @@ Or hit **Fork** — this repo is MIT on purpose.
 
 ### 1. Drop the add-on into Blender
 
-1. Open **Blender** (the GUI app — not `blender -b`).
-2. Click **Edit → Preferences → Add-ons → Install from Disk…** and choose [`addon/blender_mcp_addon.py`](addon/blender_mcp_addon.py).
-3. Enable **Interface: Plygon Blender MCP** (search “Plygon”).
-4. In the 3D Viewport press **N** → **PlygonMCP** tab → **Start MCP Server**.
+The add-on is the single file [`addon/blender_mcp_addon.py`](addon/blender_mcp_addon.py). Blender installs that `.py` file. Do not zip it. `bl_info` requires Blender 3.0.0 or newer (add-on version 1.0.3).
+
+Click-by-click download, install, Cursor config, and the ping test are in the root guide: [Step 2. Download and install the Blender MCP](../README.md#step-2-download-and-install-the-blender-mcp).
+
+- File: https://github.com/Plygonality/Plygon-mcp/blob/main/blender-mcp/addon/blender_mcp_addon.py
+- Raw file: https://raw.githubusercontent.com/Plygonality/Plygon-mcp/main/blender-mcp/addon/blender_mcp_addon.py
+
+1. Open **Blender** (the GUI app, not `blender -b`).
+2. On Blender 4.2 and newer: **Edit**, **Preferences**, **Add-ons**, the dropdown arrow at the top right, **Install from Disk...**, select `blender_mcp_addon.py`, then **Install from Disk**. On Blender 3.0 through 4.1: **Install...**, select the same file, then **Install Add-on**.
+3. Search for `Plygon` and enable the checkbox. On Blender 4.2 and newer the row is **Plygon Blender MCP**. On Blender 3.0 through 4.1 it is **Interface: Plygon Blender MCP**.
+4. In the 3D Viewport press **N**, open the **PlygonMCP** tab, and click **Start MCP Server**.
 5. Confirm **Online · port 9876**. Leave Blender open.
 
 Script alternative: [`scripts/install-blender.cmd`](../scripts/install-blender.cmd) on Windows (use this when PowerShell blocks `.ps1` files), or this from the repo on macOS/Linux:
@@ -193,11 +200,11 @@ More copy-paste prompts: [`examples/prompts.md`](examples/prompts.md)
 | Tool | What it’s for |
 |------|----------------|
 | `get_scene_info` / `list_objects` / `get_object_info` | Orient before touching anything |
-| `get_viewport_screenshot` | Visual QA — the agent *looks* |
-| `create_primitive` | Cube, sphere, cylinder, cone, torus, plane, Suzanne, ico-sphere |
+| `get_viewport_screenshot` | Visual QA — the agent *looks*. If the active workspace has no 3D Viewport, the add-on temporarily turns the largest editor into one and restores it |
+| `create_primitive` | Cube, sphere, cylinder, cone, torus, plane, Suzanne, ico-sphere. `scale` is `object.scale`, not baked into the mesh |
 | `set_object_transform` / `set_material` / `select_objects` | Layout and look-dev |
 | `delete_object` | Delete one named object |
-| `execute_blender_code` | Real bpy: modifiers, nodes, animation, whatever you can script |
+| `execute_blender_code` | Real bpy: modifiers, nodes, animation, whatever you can script. Stdout is capped at 256 KiB |
 | `export_scene` | GLB, GLTF, FBX, OBJ, BLEND |
 | `ping_blender` / `get_addon_info` | “Is Blender even listening?” |
 
@@ -240,6 +247,10 @@ Newline-framed JSON over TCP, executed on Blender’s main thread. The listener 
 {"status": "success", "result": { ... }}
 ```
 
+`execute_code` stdout is truncated to 256 KiB. A longer print still returns success and ends with `…[truncated N bytes]`, so the reply stays under the 4 MiB frame limit and the next command can use the same connection.
+
+The listener accepts newline-delimited JSON only. A connection whose first bytes are an HTTP request line (`GET`, `POST`, and the other HTTP methods) is closed immediately and not parsed.
+
 ---
 
 ## Smoke test
@@ -256,7 +267,13 @@ uv run python scripts/smoke_test.py --live   # Blender must be listening
 
 ## Security
 
-`execute_blender_code` runs with the same permissions as Blender, including access to your files and network. The listener has no TCP authentication: any local process that reaches port 9876 can call it. Save first, review tool approvals, and never expose the port beyond localhost. Tool results sent back to Cursor may be forwarded to your configured model provider.
+Port `9876` is unauthenticated by design and must stay on loopback (`127.0.0.1`). The add-on binds IPv4 loopback even if a host preference says otherwise. Do not forward the port, bind it on a LAN address, or put it behind a reverse proxy.
+
+`execute_blender_code` is full local Python execution inside Blender for whoever can open a TCP connection to that port. It has the same file and network permissions as the Blender process. Prefer the structured tools, save the `.blend` first, and review Cursor tool approvals.
+
+Browser pages cannot use the port as an HTTP endpoint. The listener closes the connection when the first bytes are an HTTP request line, so `fetch('http://127.0.0.1:9876/', …)` is rejected and does not run `execute_code`. Other local processes can still speak the newline-delimited JSON protocol and run commands, including `execute_code`.
+
+Tool results sent back to Cursor may be forwarded to your configured model provider. The bridge itself has no telemetry.
 
 ---
 
@@ -273,7 +290,8 @@ uv run python scripts/smoke_test.py --live   # Blender must be listening
 | Green MCP, `Could not connect` | Add-on enabled? **Start MCP Server**? Panel says **Online · 9876**? Green is not enough |
 | Timeouts | Keep Blender in the foreground; smaller code chunks. Do not ping from a Cloud Agent |
 | Add-on missing | Restart Blender; search Preferences for “Plygon”; or run `scripts/install-blender.cmd` |
-| Black screenshots | Keep a 3D Viewport visible |
+| Screenshot says no 3D viewport | The add-on temporarily changes the largest editor into a 3D Viewport, captures, and restores it. If that cannot be done, open the Layout workspace, or run `bpy.context.window.workspace = bpy.data.workspaces['Layout']` via `execute_blender_code`, then retry |
+| Black screenshots | Keep a 3D Viewport visible in the workspace you want to capture |
 | Stale server after a git update | `uv cache clean` then fully quit Cursor |
 | User config seems ignored in this clone | Same-name project fields take precedence. Test the user config from a different local project |
 

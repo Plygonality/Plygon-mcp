@@ -96,7 +96,13 @@ def get_object_info(object_name: str) -> str:
 
 @mcp.tool()
 def get_viewport_screenshot(max_size: int = 1000) -> Image:
-    """Capture the current 3D viewport and return it as an image for visual review."""
+    """Capture the current 3D viewport and return it as an image for visual review.
+
+    If the active workspace has no 3D Viewport (Compositing, Shading, Geometry
+    Nodes), the add-on temporarily turns the largest editor into a 3D Viewport,
+    captures, and restores that editor. If the window has no editor area to
+    borrow, the call fails and tells you to open Layout.
+    """
     blender = get_blender_connection()
     temp_path = os.path.join(
         tempfile.gettempdir(), f"plygon_mcp_{os.getpid()}_{uuid.uuid4().hex}.png"
@@ -128,7 +134,9 @@ def execute_blender_code(code: str) -> str:
     """Execute Python code inside Blender with `bpy` and `mathutils` available.
 
     Break complex tasks into small steps. Capture prints with print() — stdout
-    is returned. Prefer saving the user's file before destructive edits.
+    is returned, truncated to 256 KiB with a `…[truncated N bytes]` note when
+    the print is larger, so the connection stays up. Prefer saving the user's
+    file before destructive edits.
     """
     blender = get_blender_connection()
     result = blender.send_command("execute_code", {"code": code})
@@ -147,6 +155,9 @@ def create_primitive(
     """Create a mesh primitive.
 
     shape: CUBE, SPHERE, CYLINDER, CONE, TORUS, PLANE, MONKEY, ICO_SPHERE
+
+    scale is applied to the object (object.scale), matching set_object_transform.
+    It is not passed to the mesh operator and is not baked into the mesh.
     """
     blender = get_blender_connection()
     params: Dict[str, Any] = {

@@ -14,6 +14,7 @@ import json
 import math
 import os
 import queue
+import re
 import socket
 import sys
 import tempfile
@@ -42,6 +43,9 @@ MAX_COMMANDS_PER_TICK = 1
 _server = None
 _event_loop_callback_registered = False
 _MALFORMED_JSON = object()
+_HTTP_REQUEST_LINE = re.compile(
+    rb"^\s*(GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH|CONNECT|TRACE) \S+ HTTP/"
+)
 
 
 def _encode_message(obj) -> bytes:
@@ -281,6 +285,7 @@ class HoudiniMCPServer:
             self._clients.add(client)
         buffer = b""
         client_closed = threading.Event()
+        first_chunk_checked = False
 
         try:
             while self.running:
@@ -289,6 +294,14 @@ class HoudiniMCPServer:
                     if not data:
                         break
                     buffer += data
+                    if not first_chunk_checked:
+                        first_chunk_checked = True
+                        # Reject cross-protocol requests (e.g. a browser fetch()
+                        # POSTing to 127.0.0.1:9877). The MCP client always sends a
+                        # bare JSON object, never an HTTP request line.
+                        if _HTTP_REQUEST_LINE.match(buffer):
+                            print("PlygonMCP: rejected HTTP request on the bridge port")
+                            break
                     if len(buffer) > MAX_BUFFER_BYTES:
                         print(
                             f"PlygonMCP: closing client with more than "
