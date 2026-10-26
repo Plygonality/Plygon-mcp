@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import ast
+import errno
 import importlib.util
 import json
+import socket
 import sys
 import types
 from pathlib import Path
@@ -77,6 +80,166 @@ def test_listener_coerces_loopback_aliases_to_ipv4(monkeypatch, host):
     listener, _hou = load_listener(monkeypatch)
 
     assert listener.HoudiniMCPServer(host=host).host == "127.0.0.1"
+
+
+_EXCLUSIVE_SENTINEL = 45123
+_SHARED_BIND_HELPERS = (
+    "_configure_listener_socket",
+    "_address_in_use",
+    "_report_start_failure",
+)
+
+
+class _ProbeSocket:
+    def __init__(self, bind_error=None):
+        self.events = []
+        self.bind_error = bind_error
+
+    def setsockopt(self, level, option, value):
+        self.events.append(("setsockopt", level, option, value))
+
+    def bind(self, address):
+        self.events.append(("bind", address))
+        if self.bind_error is not None:
+            raise self.bind_error
+
+    def listen(self, backlog):
+        self.events.append(("listen", backlog))
+        raise RuntimeError("stop-after-configure")
+
+    def close(self):
+        self.events.append(("close",))
+
+
+def _windows_addr_in_use():
+    exc = OSError(
+        0,
+        "Only one usage of each socket address (protocol/network address/port) is normally permitted",
+    )
+    exc.winerror = 10048
+    return exc
+
+
+def _function_ast(path: Path, name: str) -> str:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            return ast.dump(node, include_attributes=False)
+    raise AssertionError(f"{name} missing from {path}")
+
+
+def test_listener_socket_policy_matches_blender():
+    repo = ROOT.parent
+    blender = repo / "blender-mcp" / "addon" / "blender_mcp_addon.py"
+    for name in _SHARED_BIND_HELPERS:
+        assert _function_ast(LISTENER_PATH, name) == _function_ast(blender, name)
+
+
+@pytest.mark.parametrize(
+    ("platform_name", "exclusive"),
+    [("win32", True), ("linux", False), ("darwin", False)],
+)
+def test_listener_socket_option_follows_platform(monkeypatch, platform_name, exclusive):
+    listener, _hou = load_listener(monkeypatch)
+    monkeypatch.setattr(listener.sys, "platform", platform_name)
+    if exclusive:
+        monkeypatch.setattr(
+            listener.socket, "SO_EXCLUSIVEADDRUSE", _EXCLUSIVE_SENTINEL, raising=False
+        )
+    probe = _ProbeSocket()
+    monkeypatch.setattr(listener.socket, "socket", lambda *args, **kwargs: probe)
+    server = listener.HoudiniMCPServer()
+
+    assert server.start() is False
+    assert server.start_failure is None
+
+    expected = _EXCLUSIVE_SENTINEL if exclusive else socket.SO_REUSEADDR
+    assert probe.events[0] == ("setsockopt", socket.SOL_SOCKET, expected, 1)
+    assert probe.events[1] == ("bind", ("127.0.0.1", server.port))
+    assert probe.events[2][0] == "listen"
+    chosen = [event[2] for event in probe.events if event[0] == "setsockopt"]
+    if exclusive:
+        assert socket.SO_REUSEADDR not in chosen
+    else:
+        assert _EXCLUSIVE_SENTINEL not in chosen
+
+
+@pytest.mark.parametrize(
+    ("platform_name", "bind_error"),
+    [
+        ("linux", OSError(errno.EADDRINUSE, "Address already in use")),
+        ("darwin", OSError(errno.EADDRINUSE, "Address already in use")),
+        ("win32", _windows_addr_in_use()),
+    ],
+)
+def test_address_in_use_reports_a_clear_message(monkeypatch, capsys, platform_name, bind_error):
+    listener, _hou = load_listener(monkeypatch)
+    monkeypatch.setattr(listener.sys, "platform", platform_name)
+    if platform_name == "win32":
+        monkeypatch.setattr(
+            listener.socket, "SO_EXCLUSIVEADDRUSE", _EXCLUSIVE_SENTINEL, raising=False
+        )
+    probe = _ProbeSocket(bind_error=bind_error)
+    monkeypatch.setattr(listener.socket, "socket", lambda *args, **kwargs: probe)
+    server = listener.HoudiniMCPServer(port=9877)
+
+    assert server.start() is False
+    assert server.running is False
+    assert server.socket is None
+    message = listener._port_in_use_message("127.0.0.1", 9877)
+    assert "Blender Lab" not in message
+    assert server.start_failure == message
+    assert f"PlygonMCP: {message}" in capsys.readouterr().out
+    expected = _EXCLUSIVE_SENTINEL if platform_name == "win32" else socket.SO_REUSEADDR
+    assert probe.events[0] == ("setsockopt", socket.SOL_SOCKET, expected, 1)
+    if platform_name == "win32":
+        assert probe.events[0][2] != socket.SO_REUSEADDR
+
+
+def test_busy_port_reports_that_it_is_already_in_use(monkeypatch, capsys):
+    listener, _hou = load_listener(monkeypatch)
+    holder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    holder.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    holder.bind(("127.0.0.1", 0))
+    holder.listen(1)
+    port = holder.getsockname()[1]
+    server = listener.HoudiniMCPServer(port=port)
+    try:
+        assert server.start() is False
+        message = listener._port_in_use_message("127.0.0.1", port)
+        assert server.start_failure == message
+        assert server.running is False
+        assert server.socket is None
+        assert f"PlygonMCP: {message}" in capsys.readouterr().out
+    finally:
+        if server.running:
+            server.stop()
+        holder.close()
+
+
+def test_other_bind_errors_stay_generic(monkeypatch, capsys):
+    listener, _hou = load_listener(monkeypatch)
+    probe = _ProbeSocket(bind_error=OSError("network is down"))
+    monkeypatch.setattr(listener.socket, "socket", lambda *args, **kwargs: probe)
+    server = listener.HoudiniMCPServer()
+
+    assert server.start() is False
+    assert server.start_failure is None
+    assert "failed to start: network is down" in capsys.readouterr().out
+
+
+def test_real_socket_option_matches_this_platform(monkeypatch):
+    listener, _hou = load_listener(monkeypatch)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        listener._configure_listener_socket(sock)
+        if sys.platform == "win32":
+            assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE) == 1
+            assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) == 0
+        else:
+            assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) == 1
+    finally:
+        sock.close()
 
 
 def test_listener_extracts_concatenated_commands(monkeypatch):
