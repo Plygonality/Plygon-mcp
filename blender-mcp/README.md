@@ -58,15 +58,15 @@ Or hit **Fork** — this repo is MIT on purpose.
 
 The add-on is the single file [`addon/blender_mcp_addon.py`](addon/blender_mcp_addon.py). Blender installs that `.py` file. Do not zip it. `bl_info` requires Blender 3.0.0 or newer (add-on version 1.0.3).
 
-Click-by-click download, install, Cursor config, and the ping test are in the root guide: [Step 2. Download and install the Blender MCP](../README.md#step-2-download-and-install-the-blender-mcp).
+Click-by-click download, install, Cursor config, and the ping test are in the root guide: [Step 2 — Download and install the Blender MCP](../README.md#step-2--download-and-install-the-blender-mcp).
 
 - File: https://github.com/Plygonality/Plygon-mcp/blob/main/blender-mcp/addon/blender_mcp_addon.py
 - Raw file: https://raw.githubusercontent.com/Plygonality/Plygon-mcp/main/blender-mcp/addon/blender_mcp_addon.py
 
-1. Open **Blender** (the GUI app, not `blender -b`).
-2. On Blender 4.2 and newer: **Edit**, **Preferences**, **Add-ons**, the dropdown arrow at the top right, **Install from Disk...**, select `blender_mcp_addon.py`, then **Install from Disk**. On Blender 3.0 through 4.1: **Install...**, select the same file, then **Install Add-on**.
-3. Search for `Plygon` and enable the checkbox. On Blender 4.2 and newer the row is **Plygon Blender MCP**. On Blender 3.0 through 4.1 it is **Interface: Plygon Blender MCP**.
-4. In the 3D Viewport press **N**, open the **PlygonMCP** tab, and click **Start MCP Server**.
+1. Open **Blender** (the GUI app, not `blender -b`). If **Quick Setup** is open, click **Continue** first.
+2. On Blender 4.2 and newer: **Edit**, **Preferences**, **Add-ons**, the dropdown arrow at the top right, **Install from Disk...**, select `blender_mcp_addon.py`. **Enable on Install** is ticked by default. Leave it ticked, then click **Install from Disk**. On Blender 3.0 through 4.1: **Install...**, select the same file, then **Install Add-on**.
+3. Search for `Plygon`. On Blender 4.2 and newer the row is **Plygon Blender MCP** and the checkbox is usually already on. Click it only if it is off. On Blender 3.0 through 4.1 the row is **Interface: Plygon Blender MCP**. Click that checkbox.
+4. In the 3D Viewport press **N**. **PlygonMCP** is a vertical tab in the sidebar, below **Item**, **Tool**, and **View**. Click **Start MCP Server**.
 5. Confirm **Online · port 9876**. Leave Blender open.
 
 Script alternative: [`scripts/install-blender.cmd`](../scripts/install-blender.cmd) on Windows (use this when PowerShell blocks `.ps1` files), or this from the repo on macOS/Linux:
@@ -97,6 +97,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 source "$HOME/.local/bin/env"
 "$HOME/.local/bin/uvx" --version
 ```
+
+If `source "$HOME/.local/bin/env"` prints `No such file or directory`, that error is harmless when `~/.local/bin` is already on `PATH`. Continue when `uvx --version` prints a version number.
 
 Do not `pip install uv`.
 

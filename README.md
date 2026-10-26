@@ -131,11 +131,12 @@ Cursor uses `uvx` to download and start both Python MCP clients. `uvx` does not 
    "$HOME/.local/bin/uvx" --version
    ```
 
-3. Continue only after the last line prints a version number.
+3. If `source "$HOME/.local/bin/env"` prints `No such file or directory`, that error is harmless when `~/.local/bin` is already on `PATH`.
+4. Continue only after `"$HOME/.local/bin/uvx" --version` prints a version number.
 
 Do not use `pip install uv`. The commands above put `uv` and `uvx` in the location used by the supplied Cursor configs.
 
-### Step 2. Download and install the Blender MCP
+### Step 2 — Download and install the Blender MCP
 
 Two programs are involved. The add-on runs inside Blender and listens on `127.0.0.1:9876`. The MCP server is a separate process named `plygon-blender-mcp`. Cursor starts that process with `uvx`. `uvx` does not install the add-on.
 
@@ -178,42 +179,45 @@ Save the raw URL above. Saving the GitHub blob page stores HTML, and Blender wil
 
 #### Install the add-on in Blender
 
-Open the normal Blender window. Do not use `blender -b`. The add-on refuses to start in background mode.
+Open the normal Blender window. Do not use `blender -b`. The add-on refuses to start in background mode. On a first launch, Blender shows **Quick Setup**. Click **Continue** before **Edit**.
 
-**Blender 4.2 and newer.** Install from Disk is under the dropdown arrow at the top right of the Add-ons page. The menu item is **Install from Disk...**. The file browser button is **Install from Disk**. The add-on row is named **Plygon Blender MCP**.
+**Blender 4.2 and newer.** Install from Disk is under the dropdown arrow at the top right of the Add-ons page. The menu item is **Install from Disk...**. The file browser button is **Install from Disk**. In that file browser, **Enable on Install** is ticked by default, so the add-on is usually enabled already. The add-on row is named **Plygon Blender MCP**.
 
-1. Click **Edit**.
-2. Click **Preferences**.
-3. Click **Add-ons**.
-4. Click the dropdown arrow at the top right of the Add-ons page.
-5. Click **Install from Disk...**.
-6. Open the folder that contains `blender_mcp_addon.py`.
-7. Click `blender_mcp_addon.py`.
-8. Click **Install from Disk**.
-9. Click the search field at the top of Add-ons.
-10. Type `Plygon`.
-11. Click the checkbox on the row **Plygon Blender MCP**.
+1. If **Quick Setup** is open, click **Continue**.
+2. Click **Edit**.
+3. Click **Preferences**.
+4. Click **Add-ons**.
+5. Click the dropdown arrow at the top right of the Add-ons page.
+6. Click **Install from Disk...**.
+7. Open the folder that contains `blender_mcp_addon.py`.
+8. Click `blender_mcp_addon.py`.
+9. Leave **Enable on Install** ticked.
+10. Click **Install from Disk**.
+11. Click the search field at the top of Add-ons.
+12. Type `Plygon`.
+13. Check the checkbox on the row **Plygon Blender MCP**. Click it only if it is off.
 
 **Blender 3.0 through 4.1.** The Add-ons page shows **Install...**. The file browser button is **Install Add-on**. The row is named **Interface: Plygon Blender MCP**.
 
-1. Click **Edit**.
-2. Click **Preferences**.
-3. Click **Add-ons**.
-4. Click **Install...**.
-5. Open the folder that contains `blender_mcp_addon.py`.
-6. Click `blender_mcp_addon.py`.
-7. Click **Install Add-on**.
-8. Click the search field.
-9. Type `Plygon`.
-10. Click the checkbox on the row **Interface: Plygon Blender MCP**.
+1. If **Quick Setup** is open, click **Continue**.
+2. Click **Edit**.
+3. Click **Preferences**.
+4. Click **Add-ons**.
+5. Click **Install...**.
+6. Open the folder that contains `blender_mcp_addon.py`.
+7. Click `blender_mcp_addon.py`.
+8. Click **Install Add-on**.
+9. Click the search field.
+10. Type `Plygon`.
+11. Click the checkbox on the row **Interface: Plygon Blender MCP**.
 
 #### Start the listener
 
-The panel is the 3D Viewport sidebar tab **PlygonMCP** (`View3D > Sidebar > PlygonMCP`). The port field is named **Port** and defaults to `9876`.
+The panel is the 3D Viewport sidebar (`View3D > Sidebar > PlygonMCP`). **PlygonMCP** is a vertical tab in that sidebar, below **Item**, **Tool**, and **View**. The port field is named **Port** and defaults to `9876`.
 
 1. Move the pointer over the 3D Viewport.
 2. Press **N**.
-3. Click the **PlygonMCP** tab.
+3. Click the **PlygonMCP** vertical tab, below **Item**, **Tool**, and **View**.
 4. Confirm **Port** is `9876`.
 5. Click **Start MCP Server**.
 6. Confirm the panel reads **Online · port 9876**.
@@ -356,7 +360,7 @@ Then:
 12. Click the toggle on **plygon-blender** so it is on.
 13. Wait until the **plygon-blender** row is green and lists tools.
 
-Another MCP client that starts a stdio server uses the same `command`, `args`, and `env`.
+Another MCP client that starts a stdio server uses the same `command`, `args`, and `env`. `${userHome}` in the macOS and Linux command is Cursor-only. Other clients need the full path to `uvx`.
 
 #### Test Blender
 
