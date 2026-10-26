@@ -488,6 +488,89 @@ def test_http_request_is_rejected_before_execute_code(monkeypatch, method, capsy
     assert "rejected HTTP request" in capsys.readouterr().out
 
 
+def _byte_chunks(payload: bytes, size: int) -> list[bytes]:
+    return [payload[index : index + size] for index in range(0, len(payload), size)]
+
+
+@pytest.mark.parametrize(
+    "method",
+    ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH", "CONNECT", "TRACE"],
+)
+@pytest.mark.parametrize("chunk_size", [1, 2])
+def test_split_http_request_line_is_rejected(monkeypatch, method, chunk_size, capsys):
+    listener, _hou = load_listener(monkeypatch)
+    attack = {"type": "execute_code", "params": {"code": "print('MARKER')"}}
+    server = listener.HoudiniMCPServer()
+    server.running = True
+    client = FakeClient(_byte_chunks(_http_request(method, attack), chunk_size))
+
+    server._handle_client(client)
+
+    captured = capsys.readouterr()
+    assert server.command_queue.empty()
+    assert client.sent == []
+    assert client.closed is True
+    assert "rejected HTTP request" in captured.out
+    assert "MARKER" not in captured.out
+
+
+@pytest.mark.parametrize("prefix", [b"  ", b"\n", b"\r\n"])
+def test_split_http_request_after_whitespace_is_rejected(monkeypatch, prefix, capsys):
+    listener, _hou = load_listener(monkeypatch)
+    attack = {"type": "execute_code", "params": {"code": "print('MARKER')"}}
+    server = listener.HoudiniMCPServer()
+    server.running = True
+    raw = prefix + _http_request("GET", attack)
+    client = FakeClient(_byte_chunks(raw, 1))
+
+    server._handle_client(client)
+
+    captured = capsys.readouterr()
+    assert server.command_queue.empty()
+    assert client.sent == []
+    assert client.closed is True
+    assert "rejected HTTP request" in captured.out
+    assert "MARKER" not in captured.out
+
+
+def test_long_ambiguous_http_prefix_is_rejected(monkeypatch, capsys):
+    listener, _hou = load_listener(monkeypatch)
+    attack = {"type": "execute_code", "params": {"code": "print('MARKER')"}}
+    server = listener.HoudiniMCPServer()
+    server.running = True
+    filler = b"GET /" + (b"a" * listener._HTTP_GUARD_BYTES)
+    raw = filler + b" HTTP/1.1\r\n\r\n" + json.dumps(attack).encode("utf-8") + b"\n"
+    client = FakeClient(
+        [raw[: listener._HTTP_GUARD_BYTES], raw[listener._HTTP_GUARD_BYTES :]]
+    )
+
+    server._handle_client(client)
+
+    captured = capsys.readouterr()
+    assert server.command_queue.empty()
+    assert client.sent == []
+    assert client.closed is True
+    assert "rejected HTTP request" in captured.out
+    assert "MARKER" not in captured.out
+
+
+@pytest.mark.parametrize("chunk_size", [1, 4])
+def test_split_protocol_message_is_queued(monkeypatch, chunk_size):
+    listener, _hou = load_listener(monkeypatch)
+    ping = {"type": "ping", "params": {}}
+    server = listener.HoudiniMCPServer()
+    server.running = True
+    raw = json.dumps(ping).encode("utf-8") + b"\n"
+    client = FakeClient(_byte_chunks(raw, chunk_size))
+
+    server._handle_client(client)
+
+    command, _client, _closed, protocol_error = server.command_queue.get_nowait()
+    assert command == ping
+    assert protocol_error is None
+    assert server.command_queue.empty()
+
+
 def test_json_command_is_still_queued_after_http_guard(monkeypatch):
     listener, _hou = load_listener(monkeypatch)
     ping = {"type": "ping", "params": {}}
