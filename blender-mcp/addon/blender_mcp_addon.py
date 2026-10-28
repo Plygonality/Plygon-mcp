@@ -55,12 +55,101 @@ _MALFORMED_JSON = object()
 _HTTP_REQUEST_LINE = re.compile(
     rb"^\s*(GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH|CONNECT|TRACE) \S+ HTTP/"
 )
+_HTTP_METHODS = (
+    b"GET",
+    b"POST",
+    b"PUT",
+    b"DELETE",
+    b"HEAD",
+    b"OPTIONS",
+    b"PATCH",
+    b"CONNECT",
+    b"TRACE",
+)
+# An undecided prefix longer than this is closed. A request line is one short
+# line; a JSON command stops looking like a method on the first byte.
+_HTTP_GUARD_BYTES = 8192
+_HTTP_WS = b" \t\n\r\f\v"
 _NO_VIEW3D_MESSAGE = (
     "No 3D viewport found, and this window has no editor area that can be "
     "temporarily switched to a 3D Viewport. Open a workspace that contains one, "
     "such as Layout, then retry get_viewport_screenshot. From execute_blender_code: "
     "bpy.context.window.workspace = bpy.data.workspaces['Layout']"
 )
+
+
+def _has_complete_json_frame(buffer: bytes) -> bool:
+    """True when *buffer* already holds one protocol JSON value."""
+    try:
+        text = buffer.decode("utf-8")
+    except UnicodeDecodeError:
+        return False
+    start = 0
+    length = len(text)
+    while start < length and text[start].isspace():
+        start += 1
+    if start >= length:
+        return False
+    try:
+        _obj, end = json.JSONDecoder().raw_decode(text, start)
+    except json.JSONDecodeError:
+        return False
+    return end > start
+
+
+def _http_prefix_can_match(buffer: bytes) -> bool:
+    """True if later bytes could still make _HTTP_REQUEST_LINE match."""
+    index = 0
+    length = len(buffer)
+    while index < length and buffer[index] in _HTTP_WS:
+        index += 1
+    if index == length:
+        return True
+
+    method_start = index
+    while index < length and buffer[index] not in _HTTP_WS:
+        index += 1
+    method = buffer[method_start:index]
+    if index == length:
+        return any(name.startswith(method) for name in _HTTP_METHODS)
+    if method not in _HTTP_METHODS or buffer[index] != ord(" "):
+        return False
+
+    index += 1
+    if index == length:
+        return True
+    if buffer[index] in _HTTP_WS:
+        return False
+    while index < length and buffer[index] not in _HTTP_WS:
+        index += 1
+    if index == length:
+        return True
+    if buffer[index] != ord(" "):
+        return False
+
+    index += 1
+    tail = buffer[index:]
+    return b"HTTP/".startswith(tail) or tail.startswith(b"HTTP/")
+
+
+def _http_request_decision(buffer: bytes):
+    """Return True to reject HTTP, False to parse, or None to keep reading.
+
+    The first recv() may be only a prefix such as b"GE". Hold those bytes,
+    under the guard cap and the socket's existing timeout, until the prefix
+    is long enough to decide. That is the longest method token plus a space
+    (and the rest of the line, while it still looks like a request line),
+    the newline that ends the line, or one complete JSON frame.
+    """
+    if _HTTP_REQUEST_LINE.match(buffer):
+        return True
+    if _has_complete_json_frame(buffer):
+        return False
+    if not _http_prefix_can_match(buffer):
+        return False
+    if len(buffer) >= _HTTP_GUARD_BYTES:
+        return True
+    return None
 
 
 def _encode_message(obj) -> bytes:
@@ -435,7 +524,7 @@ class BlenderMCPServer:
             self._clients.add(client)
         buffer = b""
         client_closed = threading.Event()
-        first_chunk_checked = False
+        http_checked = False
 
         try:
             while self.running:
@@ -444,12 +533,17 @@ class BlenderMCPServer:
                     if not data:
                         break
                     buffer += data
-                    if not first_chunk_checked:
-                        first_chunk_checked = True
+                    if not http_checked:
                         # Reject cross-protocol requests (e.g. a browser fetch()
                         # POSTing to 127.0.0.1:9876). The MCP client always sends a
-                        # bare JSON object, never an HTTP request line.
-                        if _HTTP_REQUEST_LINE.match(buffer):
+                        # bare JSON object, never an HTTP request line. A split
+                        # first segment ("GE" then "T / HTTP/1.1") stays buffered
+                        # until that line can be accepted or rejected.
+                        decision = _http_request_decision(buffer)
+                        if decision is None:
+                            continue
+                        http_checked = True
+                        if decision:
                             print("PlygonMCP: rejected HTTP request on the bridge port")
                             break
                     if len(buffer) > MAX_BUFFER_BYTES:
