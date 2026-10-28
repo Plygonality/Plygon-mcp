@@ -164,6 +164,8 @@ Cursor does **not** use Settings → MCP. Use **Customize → MCPs**.
 
 **Local clone:** [`configs/cursor.mcp.json`](configs/cursor.mcp.json) · **editable venv:** [`configs/cursor.mcp.pip.json`](configs/cursor.mcp.pip.json)
 
+The `--from` URL above tracks the default branch. To pin release v0.2.0, use `git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.0#subdirectory=houdini-mcp` in that same position. The Houdini package version is 0.2.0. Leave the rest of the JSON unchanged.
+
 Cursor merges same-name user and project MCP definitions, with project fields taking precedence. Open another local project to test the user-wide config exactly. Do not add this bridge under a second name, because differently named entries can compete for port 9877.
 
 Advanced editable install: run `uv venv .venv`, then `uv pip install --python .venv -e houdini-mcp` from the repo root. Replace the command placeholder in the editable-venv config with the absolute `.venv\Scripts\python.exe` path on Windows or `.venv/bin/python` path on macOS/Linux. The package is not currently published on PyPI.

@@ -2,9 +2,11 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-10-28
+
 ### Security
 
-- Reject an HTTP request line on the first chunk of a Blender (`127.0.0.1:9876`) or Houdini (`127.0.0.1:9877`) bridge connection. A browser `fetch` can no longer smuggle `execute_code` through the JSON framer. MCP clients send bare newline-delimited JSON and are unchanged. The ports stay unauthenticated for other local processes and must remain on loopback.
+- Reject an HTTP request line on a Blender (`127.0.0.1:9876`) or Houdini (`127.0.0.1:9877`) bridge connection, including when those bytes arrive in more than one read. A browser `fetch` can no longer smuggle `execute_code` through the JSON framer. MCP clients send bare newline-delimited JSON and are unchanged. The ports stay unauthenticated for other local processes and must remain on loopback.
 - The Houdini change is only that request-line guard. Tool names, input schemas, the port, and Cursor config keys are unchanged.
 
 ### Reliability
@@ -31,6 +33,8 @@
 - Add one combined Cursor MCP config for each operating-system family.
 - Standardize server names on `plygon-blender` and `plygon-houdini`.
 - Add a complete click-by-click installation and verification guide for both DCCs.
+- Expand the Blender install guide for 4.2+ Install from Disk, Quick Setup, Enable on Install, and corrections from a Blender 4.5 Linux run.
+- Ignore Python and tooling caches with a root `.gitignore`.
 - Make installers work without a global Python command; detect fresh Blender profiles and macOS Houdini preference folders.
 - Document Cursor's same-name user/project precedence and use explicit uv paths in desktop configs.
 - Correct privacy language: the bridge has no telemetry, while Cursor may send tool results to its configured model provider.

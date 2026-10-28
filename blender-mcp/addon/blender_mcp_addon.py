@@ -36,7 +36,7 @@ from bpy.props import IntProperty, BoolProperty, StringProperty
 bl_info = {
     "name": "Plygon Blender MCP",
     "author": "Plygon",
-    "version": (1, 0, 3),
+    "version": (1, 1, 0),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar > PlygonMCP",
     "description": "Local MCP bridge so Cursor agents can drive Blender via bpy",

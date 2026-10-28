@@ -56,7 +56,7 @@ Or hit **Fork** — this repo is MIT on purpose.
 
 ### 1. Drop the add-on into Blender
 
-The add-on is the single file [`addon/blender_mcp_addon.py`](addon/blender_mcp_addon.py). Blender installs that `.py` file. Do not zip it. `bl_info` requires Blender 3.0.0 or newer (add-on version 1.0.3).
+The add-on is the single file [`addon/blender_mcp_addon.py`](addon/blender_mcp_addon.py). Blender installs that `.py` file. Do not zip it. `bl_info` requires Blender 3.0.0 or newer (add-on version 1.1.0). The `plygon-blender-mcp` package version is 0.2.0.
 
 Click-by-click download, install, Cursor config, and the ping test are in the root guide: [Step 2 — Download and install the Blender MCP](../README.md#step-2--download-and-install-the-blender-mcp).
 
@@ -179,6 +179,8 @@ If `plygon-houdini` is already in the file, add `"plygon-blender"` next to it (c
 ```
 
 Red / **Needs Attention:** click the server → **Show Output**. `'uvx' is not recognized` → use the Windows JSON (it calls `%USERPROFILE%\\.local\\bin\\uvx.exe`) and fully quit Cursor. File also at [`../configs/cursor.mcp.windows.json`](../configs/cursor.mcp.windows.json).
+
+The `--from` URLs above track the default branch. To pin release v0.2.0, replace a URL with `git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.0#subdirectory=blender-mcp` or `git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.0#subdirectory=houdini-mcp`. Leave the rest of the JSON unchanged.
 
 Same-name user and project MCP definitions are merged, and project fields take precedence. Do not add this bridge under a second name; differently named entries can compete for port 9876.
 
