@@ -3,13 +3,14 @@
 </p>
 
 <p align="center">
-  <strong>Tell Cursor to build in Blender or Houdini. Watch it happen on your machine.</strong>
+  <strong>Tell Cursor to build in Blender, Houdini, or SOLIDWORKS. Watch it happen on your machine.</strong>
 </p>
 
 <p align="center">
     <a href="https://github.com/Plygonality/Plygon-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-ff6a1a?style=flat-square" alt="MIT"></a>
     <a href="blender-mcp/"><img src="https://img.shields.io/badge/Blender-3.0%2B-orange?style=flat-square&logo=blender&logoColor=white" alt="Blender 3.0+"></a>
     <a href="houdini-mcp/"><img src="https://img.shields.io/badge/Houdini-19.5%2B-orange?style=flat-square" alt="Houdini 19.5+"></a>
+    <a href="solidworks-mcp/"><img src="https://img.shields.io/badge/SOLIDWORKS-2022%2B%20Windows-orange?style=flat-square" alt="SOLIDWORKS 2022+ Windows"></a>
     <a href="blender-mcp/"><img src="https://img.shields.io/badge/Cursor-MCP-111111?style=flat-square" alt="Cursor MCP"></a>
     <a href="blender-mcp/"><img src="https://img.shields.io/badge/telemetry-none-7dffa3?style=flat-square" alt="No telemetry"></a>
 </p>
@@ -28,14 +29,15 @@ Local, no-telemetry fork of the [ahujasid/blender-mcp](https://github.com/ahujas
 |--------|------|------|
 | [Blender MCP](blender-mcp/) | `127.0.0.1:9876` | [`blender-mcp/README.md`](blender-mcp/README.md) |
 | [Houdini MCP](houdini-mcp/) | `127.0.0.1:9877` | [`houdini-mcp/README.md`](houdini-mcp/README.md) |
+| [SOLIDWORKS MCP](solidworks-mcp/) | `127.0.0.1:9878` | [`solidworks-mcp/README.md`](solidworks-mcp/README.md) |
 
-There are **two processes** per DCC. Cursor spawning the MCP (green in **Customize → MCPs**, tools listed) is not the same as Blender or Houdini listening on that port.
+There are **two processes** per DCC. Cursor spawning the MCP (green in **Customize → MCPs**, tools listed) is not the same as Blender, Houdini, or the SOLIDWORKS listener being up on that port.
 
 ```
 You → local Cursor Agent  →  plygon-*-mcp (stdio / uvx)
-                          →  TCP 127.0.0.1:9876 or :9877
-                          →  add-on / package inside the GUI DCC
-                          →  your .blend / .hip
+                          →  TCP 127.0.0.1:9876, :9877, or :9878
+                          →  add-on / package / SOLIDWORKS listener
+                          →  your .blend / .hip / .sldprt
 ```
 
 A **Cloud Agent** cannot reach the DCC on your PC. `127.0.0.1` in the cloud is not your machine. Ping only from a **local Agent** chat.
@@ -60,8 +62,8 @@ This is not a 300-tool kitchen sink. It's the layer tech artists actually keep: 
 Follow every numbered step. Cursor needs three separate pieces:
 
 1. `uvx`, which starts each MCP client.
-2. The Blender add-on and Houdini package, which run inside the DCCs.
-3. One valid Cursor `mcp.json` containing both server entries.
+2. The Blender add-on, the Houdini package, and, on Windows, the SOLIDWORKS listener.
+3. One valid Cursor `mcp.json`. Blender and Houdini can share it. Add `plygon-solidworks` in that same object when you want the third bridge.
 
 Green rows in Cursor prove only item 1. They do not prove that Blender or Houdini is listening.
 
@@ -74,7 +76,7 @@ Green rows in Cursor prove only item 1. They do not prove that Blender or Houdin
 3. Click **Download ZIP**.
 4. Open Downloads and extract the ZIP.
 5. Move the extracted folder to a permanent location. Example: `C:\Users\<your-name>\Documents\Plygon-mcp`.
-6. Open that folder and confirm it contains this `README.md`, `blender-mcp`, `houdini-mcp`, and `scripts`.
+6. Open that folder and confirm it contains this `README.md`, `blender-mcp`, `houdini-mcp`, `solidworks-mcp`, and `scripts`.
 
 **With Git:** open PowerShell or Terminal and paste **one command at a time**. Press Enter and wait for the prompt before the next line. Never paste `cd` and another command on the same line.
 
@@ -100,6 +102,8 @@ To pin the MCP servers to this release, put `@v0.2.0` immediately before `#subdi
 git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.0#subdirectory=blender-mcp
 git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.0#subdirectory=houdini-mcp
 ```
+
+`solidworks-mcp/` is not in the `v0.2.0` tag. Leave its `--from` URL unpinned so it tracks `main`.
 
 The Blender add-on and the Houdini package are copied from a local checkout, not by `uvx`. To pin those, clone the tag and run the installers from that folder:
 
@@ -159,7 +163,7 @@ Do not use `pip install uv`. The commands above put `uv` and `uvx` in the locati
 
 Two programs are involved. The add-on runs inside Blender and listens on `127.0.0.1:9876`. The MCP server is a separate process named `plygon-blender-mcp`. Cursor starts that process with `uvx`. `uvx` does not install the add-on.
 
-`bl_info` in the add-on sets `"blender": (3, 0, 0)` and `"version": (1, 1, 0)`. Use Blender 3.0.0 or newer. The add-on version is 1.1.0. The Python packages `plygon-blender-mcp` and `plygon-houdini-mcp` are 0.2.0.
+`bl_info` in the add-on sets `"blender": (3, 0, 0)` and `"version": (1, 1, 0)`. Use Blender 3.0.0 or newer. The add-on version is 1.1.0. The Python packages `plygon-blender-mcp` and `plygon-houdini-mcp` are 0.2.0. `plygon-solidworks-mcp` is the same package version and lives on `main`.
 
 Blender installs this add-on as one file, `blender_mcp_addon.py`. Do not zip it. A legacy add-on with a single `.py` file is installed from that file.
 
@@ -345,6 +349,21 @@ Then:
         "BLENDER_PORT": "9876",
         "PYTHONUTF8": "1"
       }
+    },
+    "plygon-solidworks": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=solidworks-mcp",
+        "plygon-solidworks-mcp"
+      ],
+      "env": {
+        "SOLIDWORKS_HOST": "127.0.0.1",
+        "SOLIDWORKS_PORT": "9878",
+        "PYTHONUTF8": "1"
+      }
     }
   }
 }
@@ -474,7 +493,7 @@ Optional shelf button:
 
 Plygon uses port `9877`. A message about port `8100` belongs to another Houdini MCP.
 
-### Step 4 — Put both servers in Cursor Customize → MCPs
+### Step 4 — Put the servers in Cursor Customize → MCPs
 
 1. Fully quit Cursor so it detects the newly installed `uv`:
    - Windows: right-click the Cursor icon in the system tray near the clock → **Quit**.
@@ -527,6 +546,21 @@ The `plygon-houdini` entry below is the working Windows Houdini config. Keep it.
         "BLENDER_PORT": "9876",
         "PYTHONUTF8": "1"
       }
+    },
+    "plygon-solidworks": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=solidworks-mcp",
+        "plygon-solidworks-mcp"
+      ],
+      "env": {
+        "SOLIDWORKS_HOST": "127.0.0.1",
+        "SOLIDWORKS_PORT": "9878",
+        "PYTHONUTF8": "1"
+      }
     }
   }
 }
@@ -560,6 +594,18 @@ The `plygon-houdini` entry below is the working Windows Houdini config. Keep it.
         "BLENDER_HOST": "127.0.0.1",
         "BLENDER_PORT": "9876"
       }
+    },
+    "plygon-solidworks": {
+      "command": "${userHome}/.local/bin/uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=solidworks-mcp",
+        "plygon-solidworks-mcp"
+      ],
+      "env": {
+        "SOLIDWORKS_HOST": "127.0.0.1",
+        "SOLIDWORKS_PORT": "9878"
+      }
     }
   }
 }
@@ -570,14 +616,14 @@ The same complete files are stored at [`configs/cursor.mcp.windows.json`](config
 10. Press **Ctrl+S** on Windows/Linux or **Cmd+S** on macOS.
 11. If every MCP disappears immediately, the JSON is invalid. Press **Ctrl+Z**/**Cmd+Z**, check commas and braces, and save again.
 12. Go back to **Customize** → **MCPs**.
-13. Find **plygon-blender** and **plygon-houdini**.
-14. Turn both toggles on.
-15. Wait for both rows to become green and show their tool lists.
+13. Find **plygon-blender**, **plygon-houdini**, and **plygon-solidworks** if you added it.
+14. Turn the toggles on for the DCCs you installed.
+15. Wait for those rows to become green and show their tool lists.
 16. If a row is red, click it → **Show Output** and use the troubleshooting table below.
 
 Opening this repository also loads its project [`.cursor/mcp.json`](.cursor/mcp.json). Cursor merges a user and project server with the same name, and project fields take precedence; it does not launch two copies under that same name. To test the user-wide config exactly, open another local project. Do not add the same bridge under a second name, because differently named entries can start competing clients on one DCC port.
 
-### Step 5 — Ping both DCCs from a local Agent
+### Step 5 — Ping Blender and Houdini from a local Agent
 
 1. Check Blender still says **Online · port 9876**.
 2. Check Houdini still says **listening on 127.0.0.1:9877**.
@@ -598,14 +644,30 @@ Opening this repository also loads its project [`.cursor/mcp.json`](.cursor/mcp.
 
 A Cloud Agent cannot reach `127.0.0.1` on your PC. These checks must run in a local desktop Agent chat.
 
+### Step 6 — SOLIDWORKS (Windows)
+
+SOLIDWORKS is the third bridge. It does not run inside the SOLIDWORKS process. You open SOLIDWORKS yourself, then leave a listener window open. The full click path is [`solidworks-mcp/README.md`](solidworks-mcp/README.md). Short version:
+
+1. Open the normal SOLIDWORKS window. Set a default part template if **Tools → Options → Default Templates** is empty.
+2. From the repo folder, run `.\scripts\start-solidworks.cmd`. If PowerShell blocks scripts, that `.cmd` is the file to use.
+3. Wait until the window prints `PlygonMCP: listening on 127.0.0.1:9878`. Leave it open.
+4. The combined `mcp.json` blocks in Step 4 already include `plygon-solidworks`. Save, then turn that row on.
+5. In a local Agent chat, paste: `Ping SOLIDWORKS. Do not change the document and do not call any other tool.`
+6. Confirm the result contains `"pong": true`.
+
+The listener attaches to the window you opened. It does not start a second SOLIDWORKS. Lengths in `create_extruded_box` use the part's unit: on an MMGS template, `60` means 60 mm.
+
 ### Final checklist
 
 - [ ] Blender add-on enabled; panel says **Online · port 9876**.
 - [ ] Houdini package imports; shell says **listening on 127.0.0.1:9877**.
+- [ ] SOLIDWORKS is open and `start-solidworks.cmd` says **listening on 127.0.0.1:9878** (Windows only).
 - [ ] Cursor **Customize → MCPs → plygon-blender** is green with tools.
 - [ ] Cursor **Customize → MCPs → plygon-houdini** is green with tools.
+- [ ] Cursor **Customize → MCPs → plygon-solidworks** is green with tools (Windows only).
 - [ ] Blender ping succeeds from a local Agent.
 - [ ] Houdini ping succeeds from a local Agent.
+- [ ] SOLIDWORKS ping succeeds from a local Agent (Windows only).
 - [ ] Parallel ping + scene-info calls complete without `Extra data`.
 
 ### What the agent can do
@@ -614,8 +676,9 @@ A Cloud Agent cannot reach `127.0.0.1` on your PC. These checks must run in a lo
 |---|---|
 | Blender | Scene/object inspection, viewport screenshots, primitives, transforms, materials, selection, Python execution, and export |
 | Houdini | Scene/node inspection, Scene Viewer screenshots, node creation/wiring/layout/cooking, parameters, Python/HScript execution, and hip saving |
+| SOLIDWORKS | Document and feature inspection, viewport screenshots, extruded boxes, custom properties, rebuild, Python execution against the open session, and STEP/IGES/STL/PDF export |
 
-Copy-paste task prompts: [Blender](blender-mcp/examples/prompts.md) · [Houdini](houdini-mcp/examples/prompts.md)
+Copy-paste task prompts: [Blender](blender-mcp/examples/prompts.md) · [Houdini](houdini-mcp/examples/prompts.md) · [SOLIDWORKS](solidworks-mcp/examples/prompts.md)
 
 ### Example — Houdini chess set
 
@@ -649,11 +712,11 @@ Paste these into a **local** Agent chat (not Cloud). Full copies live in [`houdi
 | `running scripts is disabled` / cannot load `.ps1` | PowerShell execution policy blocked the installer | Run `.\scripts\install-houdini.cmd` or `.\scripts\install-blender.cmd`, or the `uv.exe run --no-project python ...` line. Paste one command per line |
 | `Access is denied` under `OneDrive\Documenten\...plygon_houdini_mcp` | OneDrive or Houdini locked `rmtree` | Quit Houdini, pause OneDrive, rerun. Overlay is enough. One successful prefs folder is enough |
 | Houdini Console: `fxhoudinimcp` / `.cursor/houdini-mcp` / `help_menu` | A different MCP's menu XML | Click **Close**. Ignore port **8100**. Plygon is **9877** |
-| Green, tools listed, **Could not connect** / connection refused | uvx is up; DCC is not listening | Start MCP Server in the DCC. Confirm port 9876 (Blender) or 9877 (Houdini) |
+| Green, tools listed, **Could not connect** / connection refused | uvx is up; DCC is not listening | Start MCP Server in Blender or Houdini, or run `start-solidworks.cmd` with SOLIDWORKS already open. Confirm port 9876, 9877, or 9878 |
 | Green, **Request timed out** / Houdini “not responding” after `queued ping` | TCP connected; the listener did not reply | Force-quit the DCC, reinstall the package, start the listener again, keep the GUI in front |
 | ImportError: `No module named 'plygon_houdini_mcp'` | Packages JSON not loaded | Re-run `install_package.py`, confirm `packages/plygon_houdini_mcp.json` exists, restart Houdini |
 | Every MCP disappears after save | `mcp.json` is invalid JSON | Undo immediately; fix the missing comma/brace; keep one top-level `mcpServers` object |
-| Blender or Houdini says the port is already in use | Another listener owns 9876 or 9877 | Stop the other listener, or choose one free port and set that same port in the DCC and in `mcp.json` |
+| Blender, Houdini, or the SOLIDWORKS listener says the port is already in use | Another listener owns 9876, 9877, or 9878 | Stop the other listener, or choose one free port and set that same port in the DCC and in `mcp.json` |
 | Screenshot tool fails | Required viewport is not visible | Keep a 3D Viewport open in Blender and a Scene Viewer pane open in Houdini |
 | Works in a local Agent, fails in Cloud Agent | Cloud `127.0.0.1` is not your PC | Use a desktop Agent chat |
 | Something listening on **8100** | A different Houdini MCP | Ignore it for Plygon. Plygon is **9877** |
@@ -661,7 +724,7 @@ Paste these into a **local** Agent chat (not Cloud). Full copies live in [`houdi
 Windows port check:
 
 ```powershell
-Get-NetTCPConnection -LocalPort 9876,9877 -State Listen -ErrorAction SilentlyContinue
+Get-NetTCPConnection -LocalPort 9876,9877,9878 -State Listen -ErrorAction SilentlyContinue
 ```
 
 Do not run `uvx` manually while Cursor is also launching it. Do not register the same bridge under two different names or point Cursor and another MCP app at the same DCC socket. Same-name user/project entries are merged, with project values taking precedence.
@@ -677,9 +740,9 @@ To stay on tag `v0.2.0` instead of `main`, use the pin URLs under [Optional: pin
 1. Fully quit Blender and Houdini.
 2. Replace the local repo with the new version, or run `git pull`.
 3. Re-run `.\scripts\install-blender.cmd` and `.\scripts\install-houdini.cmd` on Windows. On macOS/Linux, rerun both `"$HOME/.local/bin/uv" run --no-project python ...` commands from Steps 2 and 3.
-4. Reopen both DCCs and start both listeners again.
-5. Fully quit and reopen Cursor. If `uvx` still runs old code, run `uv cache clean plygon-blender-mcp` and `uv cache clean plygon-houdini-mcp`, then reopen Cursor.
-6. Repeat the final verification checklist above.
+4. Reopen Blender and Houdini and start both listeners again. For SOLIDWORKS, open the window and run `.\scripts\start-solidworks.cmd` again.
+5. Fully quit and reopen Cursor. If `uvx` still runs old code, run `uv cache clean plygon-blender-mcp`, `uv cache clean plygon-houdini-mcp`, and `uv cache clean plygon-solidworks-mcp`, then reopen Cursor.
+6. Repeat the final verification checklist above. The SOLIDWORKS listener is not copied into the app. Stop the old listener window and run `.\scripts\start-solidworks.cmd` again.
 
 The DCC-side add-on/package is copied into Blender/Houdini. A Git update alone does not replace those installed copies.
 
@@ -687,8 +750,8 @@ The DCC-side add-on/package is copied into Blender/Houdini. A Git update alone d
 
 ## Privacy and security boundary
 
-- The bridge itself has no telemetry. DCC TCP traffic binds to `127.0.0.1`. Ports `9876` (Blender) and `9877` (Houdini) are unauthenticated by design and must stay on loopback. Do not forward them, bind them on a LAN address, or expose them to the internet.
-- `execute_blender_code`, `execute_houdini_code`, and `execute_hscript` are full local code execution for any process that can open a TCP connection to the matching port. They run with the same file and network permissions as Blender or Houdini.
+- The bridge itself has no telemetry. DCC TCP traffic binds to `127.0.0.1`. Ports `9876` (Blender), `9877` (Houdini), and `9878` (SOLIDWORKS) are unauthenticated by design and must stay on loopback. Do not forward them, bind them on a LAN address, or expose them to the internet.
+- `execute_blender_code`, `execute_houdini_code`, `execute_hscript`, and `execute_solidworks_code` are full local code execution for any process that can open a TCP connection to the matching port. Blender and Houdini run that code inside the DCC. SOLIDWORKS runs it in the listener process, which holds a COM handle to the open session.
 - Browser `fetch` to those ports is rejected. The listener closes the connection when the first bytes are an HTTP request line, so a webpage cannot deliver an `execute_code` body. Other local programs that speak newline-delimited JSON still can.
 - Cursor can send prompts and tool results to your configured model provider. A screenshot returned to the agent is not guaranteed to remain on your PC.
 - Save your `.blend` or `.hip` and review tool approvals.
@@ -697,14 +760,14 @@ The DCC-side add-on/package is copied into Blender/Houdini. A Git update alone d
 
 ## How it works
 
-Both bridges share the same shape:
+These bridges share the same shape:
 
-1. **DCC side** — a small listener inside Blender or Houdini (TCP server, main-thread dispatch)
+1. **DCC side** — a small listener. Blender and Houdini run it inside the app. SOLIDWORKS has no embedded Python, so a companion process on `9878` attaches to the window you already opened.
 2. **MCP side** — a Python process Cursor launches over stdio (FastMCP tools the agent calls)
 3. **Loop** — agent inspects → edits → screenshots → iterates
 
 ```
-You  →  Cursor agent  →  Plygon MCP  →  localhost  →  Blender / Houdini  →  your scene
+You  →  Cursor agent  →  Plygon MCP  →  localhost  →  Blender / Houdini / SOLIDWORKS  →  your scene
 ```
 
 You keep the taste. The agent keeps the clicks.
@@ -717,13 +780,16 @@ You keep the taste. The agent keeps the clicks.
 |------|------|
 | [`blender-mcp/`](blender-mcp/) | Blender add-on + MCP server |
 | [`houdini-mcp/`](houdini-mcp/) | Houdini package + MCP server |
+| [`solidworks-mcp/`](solidworks-mcp/) | SOLIDWORKS listener + MCP server (Windows) |
 | [`houdini-mcp/assets/chess-set-example.png`](houdini-mcp/assets/chess-set-example.png) | Install-guide example: Cursor + Houdini chess set |
 | [`houdini-mcp/package/README.md`](houdini-mcp/package/README.md) | Why the packages JSON wrapper exists |
 | [`scripts/install-houdini.cmd`](scripts/install-houdini.cmd) | Windows installer (works when `.ps1` is blocked) |
 | [`scripts/install-blender.cmd`](scripts/install-blender.cmd) | Windows installer (works when `.ps1` is blocked) |
 | [`scripts/install-houdini.ps1`](scripts/install-houdini.ps1) | Windows PowerShell installer (any cwd) |
 | [`scripts/install-blender.ps1`](scripts/install-blender.ps1) | Windows PowerShell installer (any cwd) |
-| [`.cursor/mcp.json`](.cursor/mcp.json) | Project-level Cursor config (both DCCs) |
+| [`scripts/start-solidworks.cmd`](scripts/start-solidworks.cmd) | Windows listener for the open SOLIDWORKS window |
+| [`scripts/start-solidworks.ps1`](scripts/start-solidworks.ps1) | Windows PowerShell listener (any cwd) |
+| [`.cursor/mcp.json`](.cursor/mcp.json) | Project-level Cursor config (Blender, Houdini, SOLIDWORKS) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Reliability and setup changes |
 | [`THIRD_PARTY.md`](THIRD_PARTY.md) | Provenance (blender-mcp pattern) |
 

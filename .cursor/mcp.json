@@ -25,6 +25,19 @@
         "HOUDINI_HOST": "127.0.0.1",
         "HOUDINI_PORT": "9877"
       }
+    },
+    "plygon-solidworks": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${workspaceFolder}/solidworks-mcp",
+        "plygon-solidworks-mcp"
+      ],
+      "env": {
+        "SOLIDWORKS_HOST": "127.0.0.1",
+        "SOLIDWORKS_PORT": "9878"
+      }
     }
   }
 }

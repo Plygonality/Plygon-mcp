@@ -29,6 +29,21 @@
         "BLENDER_PORT": "9876",
         "PYTHONUTF8": "1"
       }
+    },
+    "plygon-solidworks": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "%USERPROFILE%\\.local\\bin\\uvx.exe",
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=solidworks-mcp",
+        "plygon-solidworks-mcp"
+      ],
+      "env": {
+        "SOLIDWORKS_HOST": "127.0.0.1",
+        "SOLIDWORKS_PORT": "9878",
+        "PYTHONUTF8": "1"
+      }
     }
   }
 }

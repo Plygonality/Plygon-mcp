@@ -5,6 +5,7 @@ Plygon is a public MIT workshop. Forks are expected.
 - Public slug is [`Plygonality/Plygon-mcp`](https://github.com/Plygonality/Plygon-mcp). Keep clone, `uvx`, and badge URLs on that owner/repo.
 - Blender MCP lives in `blender-mcp/`
 - Houdini MCP lives in `houdini-mcp/`
+- SOLIDWORKS MCP lives in `solidworks-mcp/` (Windows listener; the package still tests without a seat)
 - Keep the TCP protocol small; add tools when a real shot needs them
 - No bridge telemetry. Don't add any. Do not claim Cursor/model traffic stays local: tool results may be sent to the user's configured model provider.
 
@@ -24,16 +25,21 @@ Process bounded work per DCC UI tick. Keep receive buffers and pending-command q
 
 ## Cursor vs DCC
 
-Green MCP + tools listed only means stdio/`uvx` spawned. The DCC still has to listen on 9876/9877. Document Cloud Agents as unable to reach a local DCC.
+Green MCP + tools listed only means stdio/`uvx` spawned. The DCC still has to listen on 9876/9877/9878. Document Cloud Agents as unable to reach a local DCC.
 
-## Test both packages
+## SOLIDWORKS
+
+The listener is a companion process, not an in-process add-in. SOLIDWORKS has no embedded Python. Attach with `GetActiveObject` on one STA thread. Do not call COM from the accept thread, and do not `Dispatch` a second SOLIDWORKS session. `pywin32` stays out of the MCP dependency list so Linux CI can import the package. Mock the COM object. Length tool arguments are document units. The API call is meters.
+
+## Test each package
 
 ```bash
 cd blender-mcp && uv sync --extra dev --locked && uv run pytest -q
 cd ../houdini-mcp && uv sync --extra dev --locked && uv run pytest -q
+cd ../solidworks-mcp && uv sync --extra dev --locked && uv run pytest -q
 ```
 
-Mocked tests must cover DCC-side framing and handlers that can run without Blender/Houdini. Use each `scripts/smoke_test.py --live` before release when the GUI applications are available. Keep both lockfiles current with their corresponding `pyproject.toml`.
+Mocked tests must cover DCC-side framing and handlers that can run without Blender, Houdini, or SOLIDWORKS. Use each `scripts/smoke_test.py --live` before release when the GUI applications are available. Keep each lockfile current with its `pyproject.toml`.
 
 Installer tests must include fresh Blender profiles, Windows Houdini preference paths, macOS `~/Library/Preferences/houdini/<version>`, and Linux `~/houdini<version>`. Cover OneDrive `rmtree` denial (overlay copy) and a dual prefs install where one folder is locked. User-facing Windows install commands should be `.cmd` wrappers plus uv's managed Python rather than assuming `python` is globally installed or that `.ps1` files can run.
 
