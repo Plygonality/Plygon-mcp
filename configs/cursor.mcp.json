@@ -23,6 +23,18 @@
         "BLENDER_HOST": "127.0.0.1",
         "BLENDER_PORT": "9876"
       }
+    },
+    "plygon-solidworks": {
+      "command": "${userHome}/.local/bin/uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=solidworks-mcp",
+        "plygon-solidworks-mcp"
+      ],
+      "env": {
+        "SOLIDWORKS_HOST": "127.0.0.1",
+        "SOLIDWORKS_PORT": "9878"
+      }
     }
   }
 }

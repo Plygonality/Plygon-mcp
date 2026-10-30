@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "plygon-solidworks": {
+      "command": "REPLACE_WITH_ABSOLUTE_PATH_TO_EDITABLE_VENV_PYTHON",
+      "args": [
+        "-m",
+        "plygon_solidworks_mcp.server"
+      ],
+      "env": {
+        "SOLIDWORKS_HOST": "127.0.0.1",
+        "SOLIDWORKS_PORT": "9878"
+      }
+    }
+  }
+}

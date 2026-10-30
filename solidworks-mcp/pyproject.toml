@@ -1,0 +1,46 @@
+[project]
+name = "plygon-solidworks-mcp"
+version = "0.2.0"
+description = "Talk to SOLIDWORKS from Cursor. Local MCP, no telemetry, fork-friendly."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Plygon" }]
+keywords = ["solidworks", "cad", "mcp", "cursor", "com", "3d", "tech-art", "agent"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: Microsoft :: Windows",
+  "Topic :: Multimedia :: Graphics :: 3D Modeling",
+]
+dependencies = [
+  "mcp>=1.9.0,<2",
+]
+
+[project.scripts]
+plygon-solidworks-mcp = "plygon_solidworks_mcp.server:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.urls]
+Homepage = "https://github.com/Plygonality/Plygon-mcp"
+Repository = "https://github.com/Plygonality/Plygon-mcp"
+Issues = "https://github.com/Plygonality/Plygon-mcp/issues"
+Documentation = "https://github.com/Plygonality/Plygon-mcp/tree/main/solidworks-mcp"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+plygon_solidworks_mcp = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
