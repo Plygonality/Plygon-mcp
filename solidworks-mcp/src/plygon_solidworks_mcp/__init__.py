@@ -1,3 +1,3 @@
 """Plygon SOLIDWORKS MCP — local Model Context Protocol server for Cursor."""
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"

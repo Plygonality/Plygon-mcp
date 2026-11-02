@@ -92,26 +92,25 @@ cd Plygon-mcp
 
 The extracted or cloned directory is called the **repo folder** below. A `.cursor/houdini-mcp` cache directory is not the repo. A Houdini Console error about that cache folder, `fxhoudinimcp`, or `help_menu` is a different MCP — click **Close**.
 
-### Optional: pin release v0.2.0
+### Optional: pin release v0.2.1
 
 The commands and `mcp.json` blocks in this guide install the default branch. Leave them as written to keep tracking `main`.
 
-To pin the MCP servers to this release, put `@v0.2.0` immediately before `#subdirectory=` in each `--from` URL:
+To pin the MCP servers to this release, put `@v0.2.1` immediately before `#subdirectory=` in each `--from` URL:
 
 ```text
-git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.0#subdirectory=blender-mcp
-git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.0#subdirectory=houdini-mcp
+git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.1#subdirectory=blender-mcp
+git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.1#subdirectory=houdini-mcp
+git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.1#subdirectory=solidworks-mcp
 ```
 
-`solidworks-mcp/` is not in the `v0.2.0` tag. Leave its `--from` URL unpinned so it tracks `main`.
-
-The Blender add-on and the Houdini package are copied from a local checkout, not by `uvx`. To pin those, clone the tag and run the installers from that folder:
+The Blender add-on and the Houdini package are copied from a local checkout, not by `uvx`. To pin those, clone the tag and run the installers from that folder. `scripts/start-solidworks.cmd` starts the listener from that same checkout.
 
 ```bash
-git clone --branch v0.2.0 https://github.com/Plygonality/Plygon-mcp.git
+git clone --branch v0.2.1 https://github.com/Plygonality/Plygon-mcp.git
 ```
 
-The raw add-on file for the tag is https://raw.githubusercontent.com/Plygonality/Plygon-mcp/v0.2.0/blender-mcp/addon/blender_mcp_addon.py.
+The raw add-on file for the tag is https://raw.githubusercontent.com/Plygonality/Plygon-mcp/v0.2.1/blender-mcp/addon/blender_mcp_addon.py.
 
 ### Step 1 — Install `uv` once
 
@@ -163,7 +162,7 @@ Do not use `pip install uv`. The commands above put `uv` and `uvx` in the locati
 
 Two programs are involved. The add-on runs inside Blender and listens on `127.0.0.1:9876`. The MCP server is a separate process named `plygon-blender-mcp`. Cursor starts that process with `uvx`. `uvx` does not install the add-on.
 
-`bl_info` in the add-on sets `"blender": (3, 0, 0)` and `"version": (1, 1, 0)`. Use Blender 3.0.0 or newer. The add-on version is 1.1.0. The Python packages `plygon-blender-mcp` and `plygon-houdini-mcp` are 0.2.0. `plygon-solidworks-mcp` is the same package version and lives on `main`.
+`bl_info` in the add-on sets `"blender": (3, 0, 0)` and `"version": (1, 1, 0)`. Use Blender 3.0.0 or newer. The add-on version is 1.1.0. The Python packages `plygon-blender-mcp`, `plygon-houdini-mcp`, and `plygon-solidworks-mcp` are 0.2.1.
 
 Blender installs this add-on as one file, `blender_mcp_addon.py`. Do not zip it. A legacy add-on with a single `.py` file is installed from that file.
 
@@ -735,7 +734,7 @@ Do not run `uvx` manually while Cursor is also launching it. Do not register the
 
 After pulling or downloading a newer release:
 
-To stay on tag `v0.2.0` instead of `main`, use the pin URLs under [Optional: pin release v0.2.0](#optional-pin-release-v020). The unpinned `--from` URLs in the JSON blocks above are unchanged and still track the default branch.
+To stay on tag `v0.2.1` instead of `main`, use the pin URLs under [Optional: pin release v0.2.1](#optional-pin-release-v021). The unpinned `--from` URLs in the JSON blocks above are unchanged and still track the default branch.
 
 1. Fully quit Blender and Houdini.
 2. Replace the local repo with the new version, or run `git pull`.

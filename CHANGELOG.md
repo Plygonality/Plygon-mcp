@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.1 - 2026-11-02
+
 ### Added
 
 - SOLIDWORKS is a third local bridge, `solidworks-mcp/`, on `127.0.0.1:9878`. A Windows listener attaches to the SOLIDWORKS window you already opened and exposes the same inspect, edit, screenshot, and export loop as Blender and Houdini. Cursor configs list `plygon-solidworks` beside the other two servers.
