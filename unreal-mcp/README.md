@@ -204,8 +204,9 @@ Get-NetTCPConnection -LocalPort 9879 -State Listen -ErrorAction SilentlyContinue
 | `ping_unreal` | Listener is up |
 | `get_addon_info` | Listener version, engine version, capabilities |
 | `get_level_info` / `list_actors` | Current level and loaded actors |
+| `get_actor_info` | One actor: label, class, path, transform, and components |
 | `select_actors` | Select by label, object name, or path. `REPLACE` or `ADD` |
-| `spawn_actor` | Static mesh, point light, directional light, spot light, camera, or cine camera |
+| `spawn_actor` | Static mesh, point light, directional light, spot light, rect light, camera, or cine camera |
 | `set_actor_transform` | Location (x, y, z), rotation (pitch, yaw, roll in degrees), scale |
 | `delete_actor` | Destroy one actor |
 | `list_assets` / `import_asset` | Content Browser list, and an automated import |
@@ -231,7 +232,7 @@ Used from Epic's Python API docs for 5.4 or later, and guarded with `hasattr` wh
 - `AutomationLibrary.take_high_res_screenshot`
 - `PCGComponent.generate`, `PCGComponent.get_graph`, `graph_instance`
 - `PCGGraphParametersHelpers` setters for bool, int32, int64, float, double, string, name, and vector
-- Class names: `StaticMeshActor`, `PointLight`, `DirectionalLight`, `SpotLight`, `CameraActor`, `CineCameraActor`, `ScopedEditorTransaction`
+- Class names: `StaticMeshActor`, `PointLight`, `DirectionalLight`, `SpotLight`, `RectLight`, `CameraActor`, `CineCameraActor`, `ActorComponent`, `ScopedEditorTransaction`
 
 Not verified, so this bridge does not call them or marks them in the result:
 

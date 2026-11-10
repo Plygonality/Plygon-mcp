@@ -39,6 +39,15 @@ class FakeMeshComponent:
         self.mesh = mesh
         return True
 
+    def get_name(self):
+        return "StaticMeshComponent0"
+
+    def get_class(self):
+        return types.SimpleNamespace(get_name=lambda: "StaticMeshComponent")
+
+    def get_path_name(self):
+        return "StaticMeshComponent0"
+
 
 class FakeGraph:
     def get_path_name(self):
@@ -106,6 +115,8 @@ class FakeActor:
         self.scale = new_scale3d
 
     def get_components_by_class(self, component_class):
+        if component_class is None:
+            return list(self.components)
         return [component for component in self.components if isinstance(component, component_class)]
 
     @property
@@ -275,6 +286,7 @@ def build_unreal():
     unreal.PointLight = type("PointLight", (), {})
     unreal.DirectionalLight = type("DirectionalLight", (), {})
     unreal.SpotLight = type("SpotLight", (), {})
+    unreal.RectLight = type("RectLight", (), {})
     unreal.CameraActor = type("CameraActor", (), {})
     unreal.CineCameraActor = type("CineCameraActor", (), {})
     unreal.StaticMeshComponent = FakeMeshComponent
@@ -556,10 +568,36 @@ def test_spawn_light_and_camera(monkeypatch):
     listener, unreal_module = load_listener(monkeypatch)
     server = listener.UnrealMCPServer()
     light = server.execute_command({"type": "spawn_actor", "params": {"kind": "point_light", "name": "Key"}})
+    rect = server.execute_command({"type": "spawn_actor", "params": {"kind": "rect_light", "name": "Fill"}})
     camera = server.execute_command({"type": "spawn_actor", "params": {"kind": "camera", "name": "Cam"}})
     assert light["result"]["class"] == "PointLight"
+    assert rect["result"]["class"] == "RectLight"
     assert camera["result"]["class"] == "CameraActor"
-    assert [actor.label for actor in unreal_module.actors.actors] == ["Key", "Cam"]
+    assert [actor.label for actor in unreal_module.actors.actors] == ["Key", "Fill", "Cam"]
+
+
+def test_get_actor_info_reports_transform_and_components(monkeypatch):
+    listener, unreal_module = load_listener(monkeypatch)
+    server = listener.UnrealMCPServer()
+    spawned = server.execute_command(
+        {
+            "type": "spawn_actor",
+            "params": {"kind": "cube", "name": "PlygonCube", "location": [4, 5, 6], "scale": [2, 2, 2]},
+        }
+    )
+    assert spawned["status"] == "success"
+    info = server.execute_command({"type": "get_actor_info", "params": {"name": "PlygonCube"}})
+    assert info["status"] == "success"
+    result = info["result"]
+    assert result["label"] == "PlygonCube"
+    assert result["class"] == "StaticMeshActor"
+    assert result["path"].endswith("PlygonCube")
+    assert result["transform"]["location"] == [4.0, 5.0, 6.0]
+    assert result["transform"]["scale"] == [2.0, 2.0, 2.0]
+    assert result["components"][0]["class"] == "StaticMeshComponent"
+    assert unreal_module.transactions == ["Plygon spawn actor"]
+    missing = server.execute_command({"type": "get_actor_info", "params": {"name": "Missing"}})
+    assert missing["status"] == "error"
 
 
 def test_execute_python_captures_stdout_and_truncates(monkeypatch):

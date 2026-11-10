@@ -73,6 +73,7 @@ _ACTOR_KINDS = {
     "point_light": "PointLight",
     "directional_light": "DirectionalLight",
     "spot_light": "SpotLight",
+    "rect_light": "RectLight",
     "camera": "CameraActor",
     "cine_camera": "CineCameraActor",
 }
@@ -655,6 +656,7 @@ class UnrealMCPServer:
             "get_addon_info": self.get_addon_info,
             "get_level_info": self.get_level_info,
             "list_actors": self.list_actors,
+            "get_actor_info": self.get_actor_info,
             "select_actors": self.select_actors,
             "spawn_actor": self.spawn_actor,
             "set_actor_transform": self.set_actor_transform,
@@ -808,6 +810,7 @@ class UnrealMCPServer:
                     "get_addon_info",
                     "get_level_info",
                     "list_actors",
+                    "get_actor_info",
                     "select_actors",
                     "spawn_actor",
                     "set_actor_transform",
@@ -833,6 +836,48 @@ class UnrealMCPServer:
             "actor_count": len(actors),
             "actors": [self._actor_summary(actor) for actor in actors[:limit]],
             "selected": [self._actor_summary(actor) for actor in selected[:limit]],
+        }
+
+    def _component_summaries(self, actor) -> list:
+        getter = getattr(actor, "get_components_by_class", None)
+        if not callable(getter):
+            return []
+        try:
+            components = list(getter(None) or [])
+        except TypeError:
+            component_class = getattr(unreal, "ActorComponent", None)
+            if component_class is None:
+                return []
+            components = list(getter(component_class) or [])
+        rows = []
+        for component in components:
+            class_name = ""
+            if hasattr(component, "get_class"):
+                component_class = component.get_class()
+                if component_class is not None and hasattr(component_class, "get_name"):
+                    class_name = component_class.get_name()
+            rows.append(
+                {
+                    "name": component.get_name() if hasattr(component, "get_name") else "",
+                    "class": class_name,
+                    "path": component.get_path_name() if hasattr(component, "get_path_name") else "",
+                }
+            )
+        return rows
+
+    def get_actor_info(self, name: str):
+        actor = self._require_actor(name)
+        summary = self._actor_summary(actor)
+        return {
+            "label": summary["label"],
+            "class": summary["class"],
+            "path": summary["path"],
+            "transform": {
+                "location": summary["location"],
+                "rotation": summary["rotation"],
+                "scale": summary["scale"],
+            },
+            "components": self._component_summaries(actor),
         }
 
     def list_actors(self, limit: int = 100):

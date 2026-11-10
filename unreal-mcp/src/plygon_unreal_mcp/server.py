@@ -85,6 +85,16 @@ def list_actors(limit: int = 100) -> str:
 
 
 @mcp.tool()
+def get_actor_info(name: str) -> str:
+    """Get one actor by label, object name, or path.
+
+    Returns the label, class, path, transform, and components. This call does not change the level.
+    """
+    unreal = get_unreal_connection()
+    return _json(unreal.send_command("get_actor_info", {"name": name}))
+
+
+@mcp.tool()
 def select_actors(names: List[str], mode: str = "REPLACE") -> str:
     """Select actors by label, object name, or path. mode is REPLACE (default) or ADD."""
     unreal = get_unreal_connection()
@@ -102,7 +112,7 @@ def spawn_actor(
 ) -> str:
     """Spawn an actor in the current level.
 
-    kind: static_mesh, cube, point_light, directional_light, spot_light, camera, cine_camera.
+    kind: static_mesh, cube, point_light, directional_light, spot_light, rect_light, camera, cine_camera.
     location is x, y, z in world units. rotation is pitch, yaw, roll in degrees.
     A static mesh uses mesh_path, or the engine Basic Shapes cube when mesh_path is empty.
     The spawn is one editor transaction.

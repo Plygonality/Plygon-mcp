@@ -228,6 +228,7 @@ def test_server_tools_registered():
         "get_addon_info",
         "get_level_info",
         "list_actors",
+        "get_actor_info",
         "select_actors",
         "spawn_actor",
         "set_actor_transform",
