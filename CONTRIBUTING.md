@@ -6,6 +6,7 @@ Plygon is a public MIT workshop. Forks are expected.
 - Blender MCP lives in `blender-mcp/`
 - Houdini MCP lives in `houdini-mcp/`
 - SOLIDWORKS MCP lives in `solidworks-mcp/` (Windows listener; the package still tests without a seat)
+- Unreal MCP lives in `unreal-mcp/` (editor Python listener; the package tests without an editor)
 - Keep the TCP protocol small; add tools when a real shot needs them
 - No bridge telemetry. Don't add any. Do not claim Cursor/model traffic stays local: tool results may be sent to the user's configured model provider.
 
@@ -25,7 +26,11 @@ Process bounded work per DCC UI tick. Keep receive buffers and pending-command q
 
 ## Cursor vs DCC
 
-Green MCP + tools listed only means stdio/`uvx` spawned. The DCC still has to listen on 9876/9877/9878. Document Cloud Agents as unable to reach a local DCC.
+Green MCP + tools listed only means stdio/`uvx` spawned. The DCC still has to listen on 9876/9877/9878/9879. Document Cloud Agents as unable to reach a local DCC.
+
+## Unreal
+
+The listener runs inside the editor. `unreal.register_slate_post_tick_callback` is the game thread. Do not call the `unreal` module from the accept thread. Register `unreal.register_python_shutdown_callback` so the socket closes when the editor exits. Editor mutations go through `unreal.ScopedEditorTransaction`. Target UE 5.4 or newer. Do not invent Python API names. Guard calls that are absent from the 5.4 docs. The port is 9879 and it stays on loopback. Epic's Unreal MCP plugin is a different server.
 
 ## SOLIDWORKS
 
@@ -37,9 +42,10 @@ The listener is a companion process, not an in-process add-in. SOLIDWORKS has no
 cd blender-mcp && uv sync --extra dev --locked && uv run pytest -q
 cd ../houdini-mcp && uv sync --extra dev --locked && uv run pytest -q
 cd ../solidworks-mcp && uv sync --extra dev --locked && uv run pytest -q
+cd ../unreal-mcp && uv sync --extra dev --locked && uv run pytest -q
 ```
 
-Mocked tests must cover DCC-side framing and handlers that can run without Blender, Houdini, or SOLIDWORKS. Use each `scripts/smoke_test.py --live` before release when the GUI applications are available. Keep each lockfile current with its `pyproject.toml`.
+Mocked tests must cover DCC-side framing and handlers that can run without Blender, Houdini, SOLIDWORKS, or the Unreal Editor. Use each `scripts/smoke_test.py --live` before release when the GUI applications are available. Keep each lockfile current with its `pyproject.toml`.
 
 Installer tests must include fresh Blender profiles, Windows Houdini preference paths, macOS `~/Library/Preferences/houdini/<version>`, and Linux `~/houdini<version>`. Cover OneDrive `rmtree` denial (overlay copy) and a dual prefs install where one folder is locked. User-facing Windows install commands should be `.cmd` wrappers plus uv's managed Python rather than assuming `python` is globally installed or that `.ps1` files can run.
 

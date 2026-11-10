@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Unreal Engine is a fourth local bridge, `unreal-mcp/`, on `127.0.0.1:9879`. A Python listener inside the Unreal Editor runs commands on the game thread from a Slate post-tick callback. The package version is 0.2.1, the same as the other bridges. Those packages are unchanged. Cursor configs can list `plygon-unreal` beside the other servers.
+
 ## 0.2.1 - 2026-11-02
 
 ### Added
