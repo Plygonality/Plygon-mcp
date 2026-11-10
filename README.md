@@ -716,7 +716,7 @@ Unreal Engine is the fourth bridge. The listener runs inside the Unreal Editor o
 
 Epic's built-in Unreal MCP is a different server. Its default URL is `http://127.0.0.1:8000/mcp`. This bridge does not use that port. Both can be enabled. Keep them under different names in `mcp.json`. v0.2.1 and earlier have no Unreal support.
 
-If the port is busy, the Python plugin is off, Epic's server was pointed at 9879, or Windows Firewall blocked Unreal Editor, use the troubleshooting table in [`unreal-mcp/README.md`](unreal-mcp/README.md#7-troubleshooting).
+If the port is busy, the Python plugin is off, Epic's server was pointed at 9879, or Windows Firewall blocked Unreal Editor, use the troubleshooting table in [`unreal-mcp/README.md`](unreal-mcp/README.md#9-troubleshooting).
 
 ### Final checklist
 
