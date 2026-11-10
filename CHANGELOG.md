@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.2.2 - 2026-11-10
+
+### Added
+
+- Unreal Engine is a fourth local bridge, `unreal-mcp/`, on `127.0.0.1:9879`. A Python listener runs inside the Unreal Editor on the game thread, through a Slate post-tick callback, and exposes level inspection, actor edits, assets, a viewport screenshot, `execute_python`, and basic PCG. Editor mutations are wrapped in `ScopedEditorTransaction`. v0.2.1 and earlier have no Unreal support.
+- `get_actor_info` returns one actor's label, class, path, transform, and components. `spawn_actor` accepts `rect_light`.
+- Package versions for Blender, Houdini, SOLIDWORKS, and Unreal are 0.2.2. The Blender add-on `bl_info` version stays `(1, 1, 0)`.
+
 ## 0.2.1 - 2026-11-02
 
 ### Added

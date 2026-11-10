@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "plygon-unreal": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=unreal-mcp",
+        "plygon-unreal-mcp"
+      ],
+      "env": {
+        "UNREAL_HOST": "127.0.0.1",
+        "UNREAL_PORT": "9879"
+      }
+    }
+  }
+}

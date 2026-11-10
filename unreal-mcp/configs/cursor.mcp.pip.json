@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "plygon-unreal": {
+      "command": "REPLACE_WITH_ABSOLUTE_PATH_TO_EDITABLE_VENV_PYTHON",
+      "args": [
+        "-m",
+        "plygon_unreal_mcp.server"
+      ],
+      "env": {
+        "UNREAL_HOST": "127.0.0.1",
+        "UNREAL_PORT": "9879"
+      }
+    }
+  }
+}

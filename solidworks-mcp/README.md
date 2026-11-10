@@ -88,7 +88,7 @@ Windows, this server alone:
 
 Turn **plygon-solidworks** on and wait until the row is green and lists tools.
 
-The `--from` URL above tracks the default branch. To pin release v0.2.1, use `git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.1#subdirectory=solidworks-mcp` in that same position. The SOLIDWORKS package version is 0.2.1. Leave the rest of the JSON unchanged.
+The `--from` URL above tracks the default branch. To pin release v0.2.2, use `git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.2#subdirectory=solidworks-mcp` in that same position. The SOLIDWORKS package version is 0.2.2. Leave the rest of the JSON unchanged.
 
 ### 4. Ping from a local Agent
 

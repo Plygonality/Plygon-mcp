@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: ["blender-mcp", "houdini-mcp", "solidworks-mcp"]
+        package: ["blender-mcp", "houdini-mcp", "solidworks-mcp", "unreal-mcp"]
         python: ["3.10", "3.13"]
 
     defaults:
