@@ -180,7 +180,7 @@ If `plygon-houdini` is already in the file, add `"plygon-blender"` next to it (c
 
 Red / **Needs Attention:** click the server → **Show Output**. `'uvx' is not recognized` → use the Windows JSON (it calls `%USERPROFILE%\\.local\\bin\\uvx.exe`) and fully quit Cursor. File also at [`../configs/cursor.mcp.windows.json`](../configs/cursor.mcp.windows.json).
 
-The `--from` URLs above track the default branch. To pin release v0.2.1, replace a URL with `git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.1#subdirectory=blender-mcp` or `git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.1#subdirectory=houdini-mcp`. Leave the rest of the JSON unchanged.
+The `--from` URLs above track the default branch. To pin release v0.2.2, replace a URL with `git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.2#subdirectory=blender-mcp` or `git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.2#subdirectory=houdini-mcp`. Leave the rest of the JSON unchanged.
 
 Same-name user and project MCP definitions are merged, and project fields take precedence. Do not add this bridge under a second name; differently named entries can compete for port 9876.
 

@@ -12,4 +12,8 @@ Houdini MCP is Plygon work that reuses that same bridge shape
 SOLIDWORKS MCP is Plygon work on that same shape. The listener calls
 Dassault Systèmes' SOLIDWORKS COM API. Dassault does not publish this server.
 
+Unreal MCP is Plygon work on that same shape. The listener calls Epic's
+`unreal` Python module inside the editor. Epic's Unreal MCP plugin is a
+separate HTTP server and is not this package.
+
 Upstream license: MIT. Copyright (c) 2025 Siddharth Ahuja — reproduced in `LICENSE`.

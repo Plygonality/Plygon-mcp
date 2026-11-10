@@ -35,6 +35,18 @@
         "SOLIDWORKS_HOST": "127.0.0.1",
         "SOLIDWORKS_PORT": "9878"
       }
+    },
+    "plygon-unreal": {
+      "command": "${userHome}/.local/bin/uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/Plygonality/Plygon-mcp.git#subdirectory=unreal-mcp",
+        "plygon-unreal-mcp"
+      ],
+      "env": {
+        "UNREAL_HOST": "127.0.0.1",
+        "UNREAL_PORT": "9879"
+      }
     }
   }
 }

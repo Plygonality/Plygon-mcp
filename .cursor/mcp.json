@@ -38,6 +38,19 @@
         "SOLIDWORKS_HOST": "127.0.0.1",
         "SOLIDWORKS_PORT": "9878"
       }
+    },
+    "plygon-unreal": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${workspaceFolder}/unreal-mcp",
+        "plygon-unreal-mcp"
+      ],
+      "env": {
+        "UNREAL_HOST": "127.0.0.1",
+        "UNREAL_PORT": "9879"
+      }
     }
   }
 }

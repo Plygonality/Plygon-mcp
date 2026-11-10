@@ -164,7 +164,7 @@ Cursor does **not** use Settings → MCP. Use **Customize → MCPs**.
 
 **Local clone:** [`configs/cursor.mcp.json`](configs/cursor.mcp.json) · **editable venv:** [`configs/cursor.mcp.pip.json`](configs/cursor.mcp.pip.json)
 
-The `--from` URL above tracks the default branch. To pin release v0.2.1, use `git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.1#subdirectory=houdini-mcp` in that same position. The Houdini package version is 0.2.1. Leave the rest of the JSON unchanged.
+The `--from` URL above tracks the default branch. To pin release v0.2.2, use `git+https://github.com/Plygonality/Plygon-mcp.git@v0.2.2#subdirectory=houdini-mcp` in that same position. The Houdini package version is 0.2.2. Leave the rest of the JSON unchanged.
 
 Cursor merges same-name user and project MCP definitions, with project fields taking precedence. Open another local project to test the user-wide config exactly. Do not add this bridge under a second name, because differently named entries can compete for port 9877.
 
